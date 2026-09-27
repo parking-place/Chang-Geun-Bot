@@ -1,0 +1,29 @@
+# Repository-wide tooling only. Install/run these tools on the designated LXC.
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["bot/src", "inference/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
+markers = [
+  "unit: isolated product tests on the designated LXC",
+  "integration: database or service integration on the designated LXC",
+  "safety: permissions, deadlines, budgets and cancellation",
+  "hosted: explicitly selected Jev API tests; may consume quota",
+  "discord: isolated real Discord/voice tests",
+]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = ["bot/src", "inference/src"]
+files = ["bot/src", "inference/src"]
+strict = true

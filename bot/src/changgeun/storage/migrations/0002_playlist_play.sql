@@ -1,0 +1,1 @@
+ALTER TABLE sessions ADD COLUMN start_after_connect INTEGER NOT NULL DEFAULT 0;

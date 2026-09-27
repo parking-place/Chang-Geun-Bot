@@ -1,0 +1,16 @@
+# Public template; hosted credentials are supplied only to the gateway.
+profile_id: "test-jev-api"
+provider: "jev-api"
+api_schema_version: "1.2"
+automatic_provider_retries: 0
+automatic_fallback: false
+max_provider_calls_per_request: 3
+hosted:
+  endpoint: "https://api.typesafe.ai/v1/systemone"
+  model: "jev-1.13.0"
+  api_key_env: "JEV_HOSTED_API_KEY"
+  max_calls_per_run: 20
+decision:
+  prompt_version: "korean-candidates-dev-v2"
+  confidence_threshold: 0.80
+  margin_threshold: 0.10

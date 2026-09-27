@@ -1,0 +1,17 @@
+* text=auto eol=lf
+*.md text
+*.py text
+*.toml text
+*.yaml text
+*.yml text
+*.json text
+*.sql text
+*.sh text
+*.example text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary

@@ -1,0 +1,82 @@
+# TEMPLATE ONLY: replace placeholders on the designated LXC before real execution.
+# Merge exactly one deploy/profiles/*.yaml mapping into inference.
+app:
+  name: "창근이"
+  timezone: "Asia/Seoul"
+  guild_allowlist: ["<REPLACE_TEST_GUILD_ID>"]
+permissions:
+  dj_role_ids: ["<REPLACE_TEST_DJ_ROLE_ID>"]
+  admin_dj_override: false
+  require_same_voice_channel_for_playback_control: true
+  allow_remote_voice_control: false
+commands:
+  allow_mentions: true
+  # 1.0.3: prefix.enabled is a deployment capability; channel list seeds DB once.
+  # Dynamic watch commands do not expand the ordinary slash/mention channel policy.
+  prefix:
+    enabled: false
+    value: "!!창근아"
+    allowed_text_channel_ids: [] # Explicit subset of allowed_text_channel_ids.
+  allowed_text_channel_ids: ["<REPLACE_TEST_TEXT_CHANNEL_ID>"]
+  confirmation_ttl_seconds: 60
+  natural_language_delete_always_confirm: true
+voice:
+  allowed_channel_ids: ["<REPLACE_TEST_VOICE_CHANNEL_ID>"]
+  allow_stage_channels: false
+  default_volume_percent: 30
+  max_volume_percent: 100
+  empty_channel_leave_seconds: 180
+  idle_leave_seconds: 300
+  paused_leave_seconds: 1800
+  auto_rejoin_after_restart: false
+  auto_resume_after_restart: false
+library:
+  max_playlist_entries: 500
+  max_queue_entries: 500
+  duplicates_allowed_by_default: false
+  queue_save_include_current_by_default: false
+  bulk_confirmation_threshold: 20
+  max_generation_count: 100
+  recent_exclusion_days: 7
+  deleted_playlist_retention_days: 30
+nlp:
+  enabled: true
+  inference_base_url: "https://<REPLACE_GATEWAY_PRIVATE_DNS>:8443"
+  max_decision_stages: 3
+  max_provider_calls_per_request: 3
+  early_exit_enabled: true
+  third_stage_enabled: true
+  third_stage_policy: "unresolved_context_only"
+  third_stage_min_remaining_ms: 1000
+  request_deadline_ms: 12000
+  stage_timeout_ms: 4000
+  automatic_model_retries: 0
+  max_user_text_chars: 500
+  max_prompt_tokens: 1024
+  max_candidates_per_stage: 12
+  context_ttl_seconds: 120
+  user_cooldown_seconds: 2
+  raw_text_logging: false
+  external_llm_fallback: false
+inference:
+  worker_processes: 1
+  max_concurrent_inferences: 1
+  max_pending_inferences: 4
+  request_ledger_path: "<REPLACE_PROFILE_RUN_TEST_LEDGER_PATH>"
+media:
+  youtube_metadata_enabled: true
+  youtube_audio_enabled: false
+  youtube_js_runtime: "<REPLACE_PINNED_NODE_22_OR_NEWER_ABSOLUTE_PATH>"
+  # Enable only in a tested bot[youtube] candidate; yt-dlp 2026.8.19 / EJS 0.8.0.
+  # Current enforced limits: <=1800s, prepare25s/resolve15s/start10s, active1/pending4.
+  max_retries_per_track: 1
+  stop_after_consecutive_failed_tracks: 3
+  max_search_results: 5
+storage:
+  database_path: "<REPLACE_PROFILE_RUN_TEST_DB_PATH>"
+  backup_directory: "<REPLACE_PROFILE_TEST_BACKUP_PATH>"
+logging:
+  level: "INFO"
+  operational_retention_days: 7
+  change_history_retention_days: 90
+  optional_raw_text_retention_hours: 72

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "changgeun-bot"
+version = "0.0.0.dev0"
+description = "Korean Discord music bot with isolated decision providers"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["discord.py[voice]==2.7.1", "PyYAML>=6,<7", "httpx>=0.28,<1", "pydantic>=2,<3"]
+classifiers = ["Private :: Do Not Upload"]
+
+[project.optional-dependencies]
+youtube = ["yt-dlp==2026.8.19", "yt-dlp-ejs==0.8.0"]
+
+[project.urls]
+Repository = "https://github.com/parking-place/Chang-Geun-Bot"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["changgeun*"]
+
+[tool.setuptools.package-data]
+"changgeun.storage" = ["migrations/*.sql"]

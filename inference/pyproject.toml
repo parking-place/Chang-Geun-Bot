@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "changgeun-inference"
+version = "0.0.0.dev0"
+description = "Profile-bound Jev decision gateway with durable dispatch budgets"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "httpx>=0.28,<1", "PyYAML>=6,<7", "pydantic>=2,<3"]
+classifiers = ["Private :: Do Not Upload"]
+
+[project.urls]
+Repository = "https://github.com/parking-place/Chang-Geun-Bot"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["changgeun_inference*"]
+
+[project.scripts]
+changgeun-gateway = "changgeun_inference.server:main"

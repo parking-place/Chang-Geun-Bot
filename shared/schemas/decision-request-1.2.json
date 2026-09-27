@@ -1,0 +1,144 @@
+{
+  "$defs": {
+    "Candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "description"
+      ],
+      "title": "Candidate",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_set_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Candidate Set Id",
+      "type": "string"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/Candidate"
+      },
+      "maxItems": 12,
+      "minItems": 2,
+      "title": "Candidates",
+      "type": "array"
+    },
+    "config_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Config Hash",
+      "type": "string"
+    },
+    "context": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Context",
+      "type": "object"
+    },
+    "context_snapshot_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Context Snapshot Id",
+      "type": "string"
+    },
+    "profile_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "prompt_version": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Prompt Version",
+      "type": "string"
+    },
+    "provider": {
+      "enum": [
+        "jev-api",
+        "mock"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "remaining_timeout_ms": {
+      "exclusiveMinimum": 0,
+      "maximum": 12000,
+      "title": "Remaining Timeout Ms",
+      "type": "integer"
+    },
+    "request_expires_at": {
+      "title": "Request Expires At",
+      "type": "number"
+    },
+    "request_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stage_index": {
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Stage Index",
+      "type": "integer"
+    },
+    "task": {
+      "enum": [
+        "classify_intent",
+        "select_action",
+        "resolve_context"
+      ],
+      "title": "Task",
+      "type": "string"
+    },
+    "utterance": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Utterance",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "provider",
+    "profile_id",
+    "config_hash",
+    "request_id",
+    "stage_index",
+    "task",
+    "request_expires_at",
+    "remaining_timeout_ms",
+    "context_snapshot_id",
+    "candidate_set_id",
+    "utterance",
+    "candidates",
+    "prompt_version"
+  ],
+  "title": "DecisionRequest",
+  "type": "object"
+}

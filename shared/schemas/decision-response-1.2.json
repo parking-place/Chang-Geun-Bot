@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_set_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Candidate Set Id",
+      "type": "string"
+    },
+    "config_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Config Hash",
+      "type": "string"
+    },
+    "context_snapshot_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Context Snapshot Id",
+      "type": "string"
+    },
+    "probabilities": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Probabilities",
+      "type": "object"
+    },
+    "profile_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "provenance": {
+      "additionalProperties": true,
+      "title": "Provenance",
+      "type": "object"
+    },
+    "provider": {
+      "enum": [
+        "jev-api",
+        "mock"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "request_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.2",
+      "default": "1.2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selected_id": {
+      "title": "Selected Id",
+      "type": "string"
+    },
+    "stage_index": {
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Stage Index",
+      "type": "integer"
+    },
+    "task": {
+      "enum": [
+        "classify_intent",
+        "select_action",
+        "resolve_context"
+      ],
+      "title": "Task",
+      "type": "string"
+    },
+    "usage": {
+      "additionalProperties": true,
+      "title": "Usage",
+      "type": "object"
+    }
+  },
+  "required": [
+    "provider",
+    "profile_id",
+    "config_hash",
+    "request_id",
+    "stage_index",
+    "task",
+    "context_snapshot_id",
+    "candidate_set_id",
+    "selected_id",
+    "probabilities",
+    "usage",
+    "provenance"
+  ],
+  "title": "DecisionResponse",
+  "type": "object"
+}

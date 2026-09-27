@@ -1,0 +1,7 @@
+# Test-only template: never use as production readiness or real-provider evidence.
+profile_id: "test-mock"
+provider: "mock"
+api_schema_version: "1.2"
+automatic_provider_retries: 0
+automatic_fallback: false
+max_provider_calls_per_request: 3

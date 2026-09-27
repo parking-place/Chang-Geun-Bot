@@ -1,0 +1,28 @@
+# TEMPLATE ONLY: executable, non-root account and paths are not verified yet.
+# Do not install before replacing all placeholders and testing on the LXC.
+[Unit]
+Description=Changgeun decision gateway
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=<REPLACE_NONROOT_SERVICE_USER>
+Group=<REPLACE_NONROOT_SERVICE_GROUP>
+WorkingDirectory=<REPLACE_SERVICE_WORKING_DIRECTORY>
+EnvironmentFile=<REPLACE_RESTRICTED_ENV_FILE>
+ExecStart=<REPLACE_VERIFIED_ABSOLUTE_EXECUTABLE_AND_ARGUMENTS>
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=<REPLACE_ALLOWED_SERVICE_DATA_PATHS>
+
+[Install]
+WantedBy=multi-user.target
