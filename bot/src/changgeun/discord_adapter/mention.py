@@ -16,6 +16,7 @@ class MessageResponse:
         self.message = message
         self.followup = followup
         self.done = False
+        self.pending_view: discord.ui.View | None = None
 
     def is_done(self) -> bool:
         return self.done
@@ -23,7 +24,7 @@ class MessageResponse:
     async def defer(self, **kwargs: Any) -> None:
         self.done = True
         if self.followup.ledger is not None:
-            await self.followup.send("요청을 확인하고 있어.")
+            await self.followup.send("요청을 확인하고 있어.", view=self.pending_view)
         else:
             await self.message.channel.typing()
 
@@ -44,6 +45,9 @@ class MessageFollowup:
         # Message replies are public; Discord ephemeral responses require interactions.
         kwargs.pop("ephemeral", None)
         async with self.lock:
+            if self.ledger is not None and self.request_id is not None:
+                if not self.ledger.response_allowed(self.request_id):
+                    raise DomainError("message_request_cancelled")
             kwargs.setdefault("view", None)
             if self.result is not None:
                 file = kwargs.pop("file", None)

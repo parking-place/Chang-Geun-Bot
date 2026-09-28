@@ -61,6 +61,26 @@ def prefix(env, channel="21"):
     return request
 
 
+def test_admin_history_and_usage_are_guild_scoped(env):
+    db, store, *_ = env
+    change(env, "add", "23")
+    store.seed("2", ["31"], True)
+    store.change(AdminGrant("2", "99", time.time()), "other", "disable", None, 0)
+    events = store.history("1")
+    assert len(events) == 1 and events[0]["action"] == "add"
+    assert "actor_id" not in events[0]
+    usage = store.usage("1")
+    assert usage["watch_changes"] == 1
+    assert usage["commands"] == 0
+    assert store.history("2")[0]["action"] == "disable"
+    with db.connect() as conn:
+        conn.execute(
+            "UPDATE watch_change_events SET created_at=? WHERE guild_id='1'",
+            (time.time() - 91 * 86400,),
+        )
+    assert store.history("1") == []
+
+
 def plan(env, request, action=Action.PLAYLIST_CREATE, args=None):
     args = {"name": str(uuid.uuid4())} if args is None else args
     with env[0].connect() as conn:
@@ -638,10 +658,15 @@ def management(monkeypatch):
     return checked
 
 
-def test_six_commands_guild_manage_permission(client):
+def test_admin_commands_guild_manage_permission(client):
     group = client.tree.get_command("주시")
     assert group.guild_only and group.default_permissions.manage_guild
-    assert {c.name for c in group.commands} == {"추가", "제거", "목록", "켜기", "끄기", "점검"}
+    assert {c.name for c in group.commands} == {
+        "추가", "제거", "목록", "켜기", "끄기", "점검", "이력"
+    }
+    operations = client.tree.get_command("운영")
+    assert operations.guild_only and operations.default_permissions.manage_guild
+    assert {c.name for c in operations.commands} == {"사용량"}
 
 
 @pytest.mark.asyncio

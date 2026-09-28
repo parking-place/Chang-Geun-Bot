@@ -97,6 +97,34 @@ class MessageLedger:
                 (state, request),
             )
 
+    def cancel_request(self, guild: str, channel: str, request: str, actor: str) -> bool:
+        """Cancel only an owned, uncommitted request in one durable transaction."""
+        with self.db.transaction() as conn:
+            row = conn.execute(
+                "SELECT state,confirmation_hash FROM message_requests WHERE guild_id=? "
+                "AND channel_id=? AND request_id=? AND actor_id=?",
+                (guild, channel, request, actor),
+            ).fetchone()
+            if row is None or row["state"] not in {"running", "waiting"}:
+                return False
+            conn.execute(
+                "UPDATE message_requests SET state='cancelled' WHERE guild_id=? AND request_id=?",
+                (guild, request),
+            )
+            if row["confirmation_hash"]:
+                conn.execute(
+                    "UPDATE confirmations SET consumed=1 WHERE token_hash=?",
+                    (row["confirmation_hash"],),
+                )
+            return True
+
+    def response_allowed(self, request: str) -> bool:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                "SELECT state FROM message_requests WHERE request_id=?", (request,)
+            ).fetchone()
+            return bool(row and row[0] not in {"cancelled", "unknown"})
+
     def cancel(
         self, guild: str, channel: str, messages: set[str], *, include_responses: bool = True
     ) -> set[str]:

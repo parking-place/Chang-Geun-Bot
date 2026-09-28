@@ -162,6 +162,63 @@ class WatchStore:
                 )
             ]
 
+    def history(self, guild: str, *, now: float | None = None) -> list[dict[str, Any]]:
+        """Bounded, guild-scoped audit summary; never return message content."""
+        cutoff = (time.time() if now is None else now) - 90 * 86400
+        with self.db.connect() as conn:
+            return [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT action,channel_id,revision,requests_cancelled,"
+                    "admissions_revoked,created_at FROM watch_change_events "
+                    "WHERE guild_id=? AND created_at>=? "
+                    "ORDER BY created_at DESC,id DESC LIMIT 100",
+                    (guild, cutoff),
+                )
+            ]
+
+    def usage(self, guild: str, *, now: float | None = None) -> dict[str, int | float]:
+        """Local 24-hour counters. Gateway-wide dispatch is queried separately."""
+        checked_at = time.time() if now is None else now
+        cutoff = checked_at - 86400
+        with self.db.connect() as conn:
+            return {
+                "checked_at": checked_at,
+                "since": cutoff,
+                "commands": int(
+                    conn.execute(
+                        "SELECT count(*) FROM command_requests WHERE guild_id=? AND created_at>=?",
+                        (guild, cutoff),
+                    ).fetchone()[0]
+                ),
+                "prefix_requests": int(
+                    conn.execute(
+                        "SELECT count(*) FROM message_requests WHERE guild_id=? AND created_at>=?",
+                        (guild, cutoff),
+                    ).fetchone()[0]
+                ),
+                "prefix_cancelled": int(
+                    conn.execute(
+                        "SELECT count(*) FROM message_requests WHERE guild_id=? AND created_at>=? "
+                        "AND state='cancelled'",
+                        (guild, cutoff),
+                    ).fetchone()[0]
+                ),
+                "watch_changes": int(
+                    conn.execute(
+                        "SELECT count(*) FROM watch_change_events WHERE guild_id=? "
+                        "AND created_at>=?",
+                        (guild, cutoff),
+                    ).fetchone()[0]
+                ),
+                "completed_tracks": int(
+                    conn.execute(
+                        "SELECT count(*) FROM playback_history WHERE guild_id=? AND played_at>=?",
+                        (guild, cutoff),
+                    ).fetchone()[0]
+                ),
+            }
+
     def seed(self, guild: str, channels: list[str], enabled: bool) -> None:
         if len(channels) > MAX_CHANNELS or len(set(channels)) != len(channels):
             raise DomainError("watch_channel_limit")

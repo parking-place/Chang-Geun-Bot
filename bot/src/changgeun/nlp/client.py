@@ -92,6 +92,31 @@ class GatewayClient:
         finally:
             self.metrics.duration("gateway_ready", time.monotonic() - observed_at)
 
+    async def usage(self) -> dict[str, int]:
+        """Authenticated bounded read; shared-run values are never guild attribution."""
+        if self._closed or self._file_version() != self._credential_version:
+            raise DomainError("inference_profile_mismatch")
+        client = await self._http()
+        async with client.stream(
+            "GET",
+            self.base_url + "/v1/usage",
+            headers={"Authorization": "Bearer " + self.token},
+            timeout=2,
+        ) as response:
+            response.raise_for_status()
+            result = await self._bounded_json(response)
+        if (
+            result.get("scope"),
+            result.get("provider"),
+            result.get("profile_id"),
+            result.get("config_hash"),
+        ) != ("shared_run", self.provider, self.profile_id, self.config_hash):
+            raise DomainError("inference_profile_mismatch")
+        calls, limit = result.get("reserved_calls"), result.get("limit")
+        if type(calls) is not int or type(limit) is not int or not 0 <= calls <= limit:
+            raise DomainError("invalid_inference_response")
+        return {"reserved_calls": calls, "limit": limit}
+
     async def _ready(self) -> None:
         if self._closed:
             raise DomainError("inference_temporarily_unavailable")

@@ -95,6 +95,17 @@ def create_app(service: DecisionService, token: str) -> FastAPI:
             "config_hash": service.config_hash,
         }
 
+    @app.get("/v1/usage")
+    async def usage(authorization: str = Header(default="")) -> dict[str, Any]:
+        authenticate(authorization)
+        return {
+            "scope": "shared_run",
+            "provider": service.provider_name,
+            "profile_id": service.profile_id,
+            "config_hash": service.config_hash,
+            **service.ledger.usage(service.run_id, service.max_run_calls),
+        }
+
     @app.post("/v1/decide")
     async def decide(
         request: DecisionRequest, authorization: str = Header(default="")

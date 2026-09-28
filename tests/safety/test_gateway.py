@@ -216,6 +216,28 @@ async def test_auth_health_does_not_call_provider(service):
 
 
 @pytest.mark.asyncio
+async def test_authenticated_usage_is_read_only_and_shared_run(service):
+    app = create_app(service, "x" * 32)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app), base_url="http://test"
+    ) as client:
+        assert (await client.get("/v1/usage")).status_code == 401
+        response = await client.get(
+            "/v1/usage", headers={"Authorization": "Bearer " + "x" * 32}
+        )
+        assert response.status_code == 200
+        assert response.json() == {
+            "scope": "shared_run",
+            "provider": "mock",
+            "profile_id": "test-mock",
+            "config_hash": "a" * 64,
+            "reserved_calls": 0,
+            "limit": 20,
+        }
+    assert service.provider.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_auth_precedes_parsing_and_chunked_bodies_are_bounded(service):
     app = create_app(service, "x" * 32)
 

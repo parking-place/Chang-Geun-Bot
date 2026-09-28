@@ -57,6 +57,12 @@ class Ledger:
         conn.execute("PRAGMA busy_timeout=5000")
         return conn
 
+    def usage(self, run_id: str, limit: int) -> dict[str, int]:
+        """Only the current shared run's durable reservation count, never request data."""
+        with self.connect() as conn:
+            row = conn.execute("SELECT calls FROM run_budget WHERE run_id=?", (run_id,)).fetchone()
+        return {"reserved_calls": int(row[0]) if row else 0, "limit": limit}
+
     @staticmethod
     def binding(request: DecisionRequest) -> str:
         value = json.dumps(

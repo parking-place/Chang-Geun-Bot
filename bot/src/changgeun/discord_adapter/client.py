@@ -216,6 +216,38 @@ class ConfirmationView(discord.ui.View):
         self.stop()
 
 
+class RequestCancelView(discord.ui.View):
+    def __init__(
+        self, client: ChangGeunClient, guild: str, channel: str, request: str, actor: str
+    ) -> None:
+        super().__init__(timeout=60)
+        self.client, self.guild, self.channel = client, guild, channel
+        self.request, self.actor = request, actor
+
+    @discord.ui.button(label="요청 취소", style=discord.ButtonStyle.secondary)
+    async def cancel(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        if (str(interaction.guild_id), str(interaction.channel_id), str(interaction.user.id)) != (
+            self.guild,
+            self.channel,
+            self.actor,
+        ):
+            await interaction.response.send_message("요청자만 취소할 수 있어.", ephemeral=True)
+            return
+        cancelled = self.client.message_ledger.cancel_request(
+            self.guild, self.channel, self.request, self.actor
+        )
+        if not cancelled:
+            await interaction.response.send_message(
+                "이미 처리됐어. 완료된 변경은 여기서 취소할 수 없어.", ephemeral=True
+            )
+            return
+        await self.client.cancel_watch_work(self.guild, [self.request])
+        await interaction.response.edit_message(content="진행 요청을 취소했어.", view=None)
+        self.stop()
+
+
 class PlaybackView(discord.ui.View):
     def __init__(self, client: ChangGeunClient) -> None:
         super().__init__(timeout=300)
@@ -2218,6 +2250,13 @@ class ChangGeunClient(discord.Client):
             if request is None:
                 return
             entry = MentionEntry(message, self.message_ledger, request)
+            entry.response.pending_view = RequestCancelView(
+                self,
+                str(message.guild.id),
+                str(message.channel.id),
+                request,
+                str(message.author.id),
+            )
             task = asyncio.current_task()
             assert task is not None
             self.message_owners[request] = key

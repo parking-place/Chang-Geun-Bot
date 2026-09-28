@@ -8,6 +8,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 import discord
+import httpx
 from discord import app_commands
 
 from changgeun.application.watch import AdminGrant
@@ -198,6 +199,67 @@ class WatchPages(discord.ui.View):
         await self.move(interaction, 1)
 
 
+class WatchHistoryPages(discord.ui.View):
+    def __init__(self, client: ChangGeunClient, grant: AdminGrant, page: int) -> None:
+        super().__init__(timeout=60)
+        self.client, self.grant, self.page = client, grant, page
+
+    async def move(self, interaction: discord.Interaction, offset: int) -> None:
+        if (str(interaction.user.id), str(interaction.guild_id)) != (
+            self.grant.actor,
+            self.grant.guild,
+        ):
+            await interaction.response.send_message("요청자만 볼 수 있어.", ephemeral=True)
+            return
+        await invoke(self.client, interaction, "history", page=max(0, self.page + offset))
+
+    @discord.ui.button(label="이전", style=discord.ButtonStyle.secondary)
+    async def previous(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await self.move(interaction, -1)
+
+    @discord.ui.button(label="다음", style=discord.ButtonStyle.secondary)
+    async def next_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await self.move(interaction, 1)
+
+
+async def show_usage(client: ChangGeunClient, interaction: discord.Interaction) -> None:
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    try:
+        async with asyncio.timeout(15):
+            grant = await admin(client, interaction)
+            local = client.watch.usage(grant.guild)
+            shared = None
+            if client.gateway is not None:
+                try:
+                    shared = await client.gateway.usage()
+                except (DomainError, TimeoutError, OSError, httpx.HTTPError):
+                    pass
+            await admin(client, interaction)
+            text = (
+                f"이 서버 최근 24시간 · 확인 <t:{int(local['checked_at'])}:T>\n"
+                f"구조화 처리 {local['commands']} · 접두어 요청 {local['prefix_requests']} "
+                f"(취소 {local['prefix_cancelled']})\n"
+                f"주시 변경 {local['watch_changes']} · 완료곡 {local['completed_tracks']}\n"
+                "요청별 실패·가격·서버별 Jev 호출은 이 집계로 확인할 수 없어."
+            )
+            if shared is not None:
+                text += (
+                    f"\n중계 전체 개발 실행 예약 {shared['reserved_calls']}/{shared['limit']} "
+                    "(이 서버 사용량 아님)"
+                )
+            else:
+                text += "\n중계 전체 예약: 확인 불가"
+            await interaction.followup.send(text, ephemeral=True)
+    except (DomainError, discord.HTTPException, TimeoutError):
+        await interaction.followup.send(
+            "최신 관리자 권한이나 집계를 확인하지 못했어. 다시 시도해줘.", ephemeral=True
+        )
+
+
 async def invoke(
     client: ChangGeunClient,
     interaction: discord.Interaction,
@@ -223,6 +285,34 @@ async def invoke(
             assert guild is not None
             state = client.watch.state(grant.guild)
             channels = client.watch.channels(grant.guild)
+            if action == "history":
+                events = client.watch.history(grant.guild)
+                page = min(page, max(0, (len(events) - 1) // 10))
+                names = {
+                    "add": "추가",
+                    "remove": "제거",
+                    "enable": "켜기",
+                    "disable": "끄기",
+                    "health": "접근 상태 변경",
+                }
+                lines = [
+                    f"<t:{int(row['created_at'])}:f> · {names.get(row['action'], '변경')} "
+                    f"r{row['revision']} · 취소 {row['requests_cancelled']} "
+                    f"· 승인 만료 {row['admissions_revoked']}"
+                    for row in events[page * 10 : (page + 1) * 10]
+                ]
+                await admin(client, interaction)
+                history_view: discord.ui.View | None = (
+                    WatchHistoryPages(client, grant, page) if len(events) > 10 else None
+                )
+                text = "주시 변경 이력 · 최근 90일/최대 100건\n" + (
+                    "\n".join(lines) or "변경 이력이 없어."
+                )
+                if history_view is not None:
+                    await interaction.followup.send(text, view=history_view, ephemeral=True)
+                else:
+                    await interaction.followup.send(text, ephemeral=True)
+                return
             if action in {"list", "inspect"}:
                 if expected is not None and expected != state["revision"]:
                     raise DomainError("watch_revision_conflict")
@@ -413,4 +503,21 @@ def register(client: ChangGeunClient) -> None:
     ) -> None:
         await invoke(client, interaction, "inspect", str(채널.id) if 채널 else None)
 
+    @group.command(name="이력", description="최근 90일 주시 변경 이력 보기")
+    async def history(interaction: discord.Interaction) -> None:
+        await invoke(client, interaction, "history")
+
     client.tree.add_command(group)
+
+    operations = app_commands.Group(
+        name="운영",
+        description="서버 관리자 운영 정보",
+        guild_only=True,
+        default_permissions=discord.Permissions(manage_guild=True),
+    )
+
+    @operations.command(name="사용량", description="이 서버 처리와 중계 전체 예약 현황")
+    async def usage(interaction: discord.Interaction) -> None:
+        await show_usage(client, interaction)
+
+    client.tree.add_command(operations)

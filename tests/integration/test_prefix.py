@@ -1,5 +1,6 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -77,6 +78,73 @@ def test_cancel_before_commit_denies_executor(env):
         )
     with db.connect() as conn:
         assert conn.execute("SELECT count(*) FROM playlists").fetchone()[0] == 0
+
+
+def test_requester_button_cancel_is_owned_and_durable(env):
+    db, ledger, actor, executor = env
+    request = admit(ledger)
+    assert not ledger.cancel_request("1", "20", request, "other")
+    assert not ledger.cancel_request("1", "other", request, "10")
+    assert ledger.response_allowed(request)
+    assert ledger.cancel_request("1", "20", request, "10")
+    assert not ledger.response_allowed(request)
+    assert not ledger.cancel_request("1", "20", request, "10")
+    with pytest.raises(DomainError, match="message_request_cancelled"):
+        executor.execute(
+            ActionPlan(request, "1", "10", Action.PLAYLIST_CREATE, {"name": "새벽"}), actor
+        )
+    with db.connect() as conn:
+        assert conn.execute("SELECT count(*) FROM playlists").fetchone()[0] == 0
+
+
+def test_requester_cancel_after_commit_reports_too_late(env):
+    _, ledger, actor, executor = env
+    request = admit(ledger)
+    executor.execute(
+        ActionPlan(request, "1", "10", Action.PLAYLIST_CREATE, {"name": "새벽"}), actor
+    )
+    assert not ledger.cancel_request("1", "20", request, "10")
+    assert ledger.response_allowed(request)
+
+
+def test_100_requester_cancel_commit_races(env):
+    db, ledger, actor, executor = env
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        for index in range(100):
+            request = admit(ledger, message=str(1000 + index))
+            assert request is not None
+            barrier = Barrier(2)
+
+            def cancel():
+                barrier.wait()
+                return ledger.cancel_request("1", "20", request, "10")
+
+            def commit():
+                barrier.wait()
+                try:
+                    executor.execute(
+                        ActionPlan(
+                            request,
+                            "1",
+                            "10",
+                            Action.PLAYLIST_CREATE,
+                            {"name": f"경합{index}"},
+                        ),
+                        actor,
+                    )
+                    return True
+                except DomainError as exc:
+                    assert exc.code == "message_request_cancelled"
+                    return False
+
+            cancelled = pool.submit(cancel)
+            committed = pool.submit(commit)
+            assert cancelled.result() != committed.result()
+    with db.connect() as conn:
+        committed_count = conn.execute("SELECT count(*) FROM playlists").fetchone()[0]
+        assert committed_count == conn.execute(
+            "SELECT count(*) FROM message_requests WHERE state='committed'"
+        ).fetchone()[0]
 
 
 def test_committed_delete_does_not_undo(env):
