@@ -1,6 +1,6 @@
 # 06 — Jev 다중 질문·인수 해석·두 패스
 
-- 상태: **PLANNED**
+- 상태: **IN_PROGRESS — 두 패스/묶음질문·선택적3차와 Jev wire 개발시험 완료, 실제품질·복수선택 대기**
 - 선행: [04 실제 목록·새 값](04_typed_candidates_and_resolution.md), [05 API/예산](05_gateway_budget_and_api_migration.md).
 - 명세: 6절·7.1~7.2·12.5. 시험: R120-12/13.
 

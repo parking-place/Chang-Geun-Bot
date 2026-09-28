@@ -40,3 +40,9 @@
 - GPT-5 nano 검증 금액은 원장에 `micro USD`로 원자 예약하며 전체 상한 **US$1**을 재시작/요청별로 초기화하지 않는다. 이 단계의 LLM 원격 사용은 비활성(`llm_reservation` 미구성)이다. 실제 가격·토큰 상한과 과금 확정은 p7/p10 검증 후에만 연결한다. GPT 실호출0·실제지출0.
 - `/v2/parse`, `/v2/cancel`, `/v2/usage`는 선택형 ParserService를 주입할 때만 생성한다. 현재 운영 `main()`에는 주입하지 않았고 기존 API1.2는 그대로다. 한 root의 동일 호출 합류/캐시, 권한 없는 HTTP 거부, 취소 뒤 늦은 결과 거부를 기록형 LXC 대역에서 검증했다.
 - 지정 LXC에서 신규 예산5·서비스3·신규계약4·기존 예산13 = 관련25 PASS, 신규 모듈 Ruff/mypy PASS. 재시작 tombstone/병렬 중복/8회/US$1 경계는 mock 예약 증거이며 실제 외부 과금 검증이 아니다. 활성 서비스 배포·실제 Jev/GPT 호출은 아직 없다.
+
+## p6 — Jev 질문 묶음과 재해석 패스
+
+- [TypeSafe 공식 API](https://docs.typesafe.ai/api)와 [Primitives](https://docs.typesafe.ai/primitives)의 현재 문서를 확인해 동일 HTTP 요청의 named 질문·Choice `choice/probabilities/confidence`·Noul `noul`·usage 형태를 검증했다. 신규 `HostedParserProvider`는 Jev 질문만 전송하고 질문 키/선택지/분포/타입 불일치를 거부한다. 외부 API 실호출은 아직 하지 않았다.
+- `JevInterpreter`는 두 패스에서 같은 코드로 입력 성격+허용 명령 전체를 묶고, 실제 목록/원문값의 인수 질문을 한 번에 묶는다. 목록 선택 후 entry가 새로 생길 때만3차를 사용한다. 재해석 패스에서 명령을 다시 고르고, 복합/비명령은 실행 초안으로 만들지 않는다. `ParserSession`은 기존 내부TLS 자격정보를 재사용해 parser-api-v2 root/응답 결합과 취소를 수행한다.
+- 지정LXC 고정 DB/HTTP mock의 신규8시험 PASS, 신규 모듈 Ruff/mypy PASS. 후보 선택 뒤 실제 실행 검증은p9, 목록형 Noul 복수선택·전체47명령/옵션 정확도·실제Jev 성능과 품질은 미완료다. GPT 실호출0, Jev 실호출0.

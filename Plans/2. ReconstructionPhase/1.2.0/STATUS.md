@@ -16,7 +16,7 @@
 | 03 | [정규화·원문](03_normalizer_and_provenance.md) | IN_PROGRESS | [p3 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC 단위10 PASS | 새 Discord 경로와 원문값 검증 연결은p4/p9 |
 | 04 | [실제 목록·새 값](04_typed_candidates_and_resolution.md) | IN_PROGRESS | [p4 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC 6 PASS | 전체 collection/실행 직전 재검증·p6 연결 |
 | 05 | [gateway·예산](05_gateway_budget_and_api_migration.md) | IN_PROGRESS | [p5 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC 25 PASS | 실제 provider 비용상한·운영 연결·중단/원장장애 검증 |
-| 06 | [Jev 두 패스](06_jev_interpreter.md) | PLANNED | — / NOT_RUN | 묶음질문·조회의존3차 |
+| 06 | [Jev 두 패스](06_jev_interpreter.md) | IN_PROGRESS | [p6 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock8 PASS | 실제Jev 품질·복수선택/전체인수 |
 | 07 | [LLM 프로필](07_llm_provider_profiles.md) | PLANNED | — / NOT_RUN | 두schema·adapter·disabled |
 | 08 | [복구 전이](08_rewrite_and_fallback_orchestration.md) | PLANNED | — / NOT_RUN | 의미보존·분기/종료 |
 | 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | PLANNED | — / NOT_RUN | 단회후속·실제확인·권한 |
