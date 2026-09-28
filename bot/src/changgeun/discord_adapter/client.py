@@ -695,6 +695,9 @@ class ChangGeunClient(discord.Client):
             )
         self._register_commands()
         watch_commands.register(self)
+        from changgeun.discord_adapter.registry import build_service
+
+        self.command_service = build_service(self.tree)
 
     async def setup_hook(self) -> None:
         self.message_ledger.recover()

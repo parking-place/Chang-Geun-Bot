@@ -11,7 +11,7 @@
 | 단계 | 계획 | 상태 | 제품revision/실행증거 | 다음 게이트 |
 | --- | --- | --- | --- | --- |
 | 01 | [기준선·계약](01_baseline_and_contracts.md) | IN_PROGRESS | [p1 실행](../../../evidence/public/reconstruction-120-progress.md) | 계약3시험PASS; 전수대응은p2와연결 |
-| 02 | [등록부·서비스](02_registry_and_command_service.md) | PLANNED | — / NOT_RUN | 명령/옵션 전수·공통 실행 |
+| 02 | [등록부·서비스](02_registry_and_command_service.md) | IN_PROGRESS | [p2 실행](../../../evidence/public/reconstruction-120-progress.md) |47개등록부·45회귀PASS, 신규연결p9 |
 | 03 | [정규화·원문](03_normalizer_and_provenance.md) | PLANNED | — / NOT_RUN | 보호구간·source map |
 | 04 | [실제 목록·새 값](04_typed_candidates_and_resolution.md) | PLANNED | — / NOT_RUN | 목록 완전성/소속·원문값 추출 |
 | 05 | [gateway·예산](05_gateway_budget_and_api_migration.md) | PLANNED | — / NOT_RUN | 신규 계약·원자 예약·취소 |
