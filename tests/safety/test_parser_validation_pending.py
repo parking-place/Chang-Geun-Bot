@@ -84,10 +84,12 @@ def test_pending_60_300_owner_expiry_and_atomic_single_use():
     attrs = dict(root_id='r', guild_id='g', channel_id='c', actor_id='u')
     typed = store.issue(kind='typed', command_id='C05', argument='목록',
                         payload={'allowed': True}, now=100, **attrs)
+    assert store.has_root('r') and not store.has_root('other')
     with pytest.raises(ParseError, match='pending_owner_mismatch'):
         store.consume(typed, kind='typed', now=101,
                       **{**attrs, 'actor_id': 'stranger'})
     assert store.consume(typed, kind='typed', now=159.999, **attrs).argument == '목록'
+    assert not store.has_root('r')
     with pytest.raises(ParseError, match='pending_unknown_or_used'):
         store.consume(typed, kind='typed', now=160, **attrs)
     confirmation = store.issue(kind='confirm', command_id='C05', payload=True,

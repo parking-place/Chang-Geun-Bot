@@ -68,6 +68,23 @@ def test_stale_future_message_not_admitted(env):
     assert ledger.admit("1", "20", "100", "10", "목록", "a" * 64, 50, now=41) is None
 
 
+def test_prefix_confirmation_keeps_request_waiting_until_button_finishes(env):
+    db, ledger, _, _ = env
+    request = admit(ledger)
+    ledger.finish(request, "waiting")
+    ledger.finish(request, "finished")  # The initial message handler has returned.
+    with db.connect() as conn:
+        assert conn.execute(
+            "SELECT state FROM message_requests WHERE request_id=?", (request,)
+        ).fetchone()[0] == "waiting"
+    assert ledger.response_allowed(request)
+    ledger.finish_waiting(request, "finished")
+    with db.connect() as conn:
+        assert conn.execute(
+            "SELECT state FROM message_requests WHERE request_id=?", (request,)
+        ).fetchone()[0] == "finished"
+
+
 def test_cancel_before_commit_denies_executor(env):
     db, ledger, actor, executor = env
     request = admit(ledger)

@@ -84,3 +84,7 @@ class PendingStore:
                 return False
             del self._items[key]
             return True
+
+    def has_root(self, root_id: str) -> bool:
+        with self._lock:
+            return any(item.root_id == root_id for item in self._items.values())

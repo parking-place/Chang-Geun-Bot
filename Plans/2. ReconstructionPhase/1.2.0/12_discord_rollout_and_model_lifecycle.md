@@ -1,6 +1,6 @@
 # 12 — Discord 단계 적용과 모델 수명 관리
 
-- 상태: **IN_PROGRESS — p12l bot v2와 p12e gateway v2/LLM disabled를 테스트 서버에 적용. Discord API 확인 완료, 사용자 자연어 입력 인수 FAIL; 정식 출시는 미완료**
+- 상태: **IN_PROGRESS — p12o bot v2와 p12e gateway v2/LLM disabled를 테스트 서버에 적용. p12n 실제 음성 입장 FAIL, p12o 재시험 대기; 정식 출시는 미완료**
 - 책임: R120-31~33. 선행: [11 LXC 평가·이관](11_lxc_evaluation_and_migration.md)의 같은 후보 필수 게이트.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12.3·13·15.15·15.16.
 - 배포·검증 위치: DiscordBotLXC의 별도 bot/gateway 계정과 loopback TLS 경계 유지.
@@ -10,7 +10,7 @@
 
 계획 출발 기록은 활성 bot `patch117b`/gateway `patch116g`, 소스·wheel 후보 `patch118a` 미적용이다. p12d/e 실행에서 bot `patch117b`를 유지하고 gateway를 `recon120p12egw`까지 바꿨다. 공유 원장과 v1 계약을 보존했고 제한 Jev·GPT 실호출을 기록했다. GPT 키의 LXC 임시 사본을 제거하고 LLM disabled로 복구했다. 새 bot 적용 직전 현재 상태와 Git SHA·설치 wheel·설정 지문을 다시 잠근다.
 
-이 단계의 개발 후보 배포, 사용자 조작 인수, 버전 전체 완료, 정식 VERSION/태그는 각각 다른 판정이다. p12l 테스트 서버 배포 후 사용자 자연어 입력5건이 모두 해석에 실패했다. 상세 증거와 Jev 진단은 [실행 기록](../../../evidence/public/reconstruction-120-progress.md)에 남긴다. 구현 요청 이후에는 승인된 실행 범위에서 단계별 증거를 남긴다.
+이 단계의 개발 후보 배포, 사용자 조작 인수, 버전 전체 완료, 정식 VERSION/태그는 각각 다른 판정이다. p12m에서는 조회2건이 성공했으나 음성 입장2건이 실패했고, p12n에서는 확인 버튼 뒤에도 입장하지 못했다. p12o는 대기 상태를 보정해 적용했으며 실제 재시험을 기다린다. 상세 증거와 Jev 진단은 [실행 기록](../../../evidence/public/reconstruction-120-progress.md)에 남긴다. 구현 요청 이후에는 승인된 실행 범위에서 단계별 증거를 남긴다.
 
 ## R120-31 — 단계 적용과 실제 Discord 인수
 

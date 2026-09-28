@@ -4,9 +4,9 @@
 
 ## 현재 적용 상태
 
-현재 개발 봇 `recon120p12lbot`(v2/LLM disabled)과 중계 `recon120p12egw`(v2/LLM disabled)를 테스트 서버에 적용했다. 봇 run은 `recon120p12l-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [1.2.0 실행 기록](../evidence/public/reconstruction-120-progress.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. p12l 실제 자연어 사용자 입력5건은 모두 해석 실패로 인수 FAIL이며 전체 출시 게이트는 미완료다. 정식 VERSION/태그는 만들지 않았다.
+현재 개발 봇 `recon120p12obot`(v2/LLM disabled)과 중계 `recon120p12egw`(v2/LLM disabled)를 테스트 서버에 적용했다. 봇 run은 `recon120p12o-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [1.2.0 실행 기록](../evidence/public/reconstruction-120-progress.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. p12m 실제 조회2건은 PASS였으나 p12n 음성 입장은 확인 뒤에도 FAIL이었다. p12o 재시험을 기다린다. 전체 출시 게이트는 미완료이고 정식 VERSION/태그는 만들지 않았다.
 
-1.1.8의 [이전 `patch118a` 봇 wheel](../evidence/public/patch-118-development-20260928.md)은 격리 후보로 남겨 둔다. 현재 활성 `p12l` 후보는 LXC source/설치 wheel 각각496회귀를 통과했다. 공유 Jev 예약 마지막 확인 값은 사용자 입력·합성 재현을 포함해721/3000, GPT 예약/실제는17229/2678 micro USD이며 다음 평가 전 재조회한다. GPT 키의 임시 LXC 사본은 제거했고 gateway는 disabled다.
+1.1.8의 [이전 `patch118a` 봇 wheel](../evidence/public/patch-118-development-20260928.md)은 격리 후보로 남겨 둔다. 현재 활성 `p12o` 후보는 LXC source/설치 wheel 각각506회귀를 통과했다. 공유 Jev 예약 마지막 확인 값은 p12n 사용자 입력을 포함해785/3000, GPT 예약/실제는17229/2678 micro USD이며 다음 평가 전 재조회한다. GPT 키의 임시 LXC 사본은 제거했고 gateway는 disabled다.
 
 `changgeun-dev-bot.service`는 봇 계정, `changgeun-jev-api.service`는 별도 `changgeun-gateway` 계정으로 실행한다. 중계는 loopback TLS8443만 받는다. 외부 API 키를 봇 계정에 제공하지 않는다. 두 개발 unit은 자동 부팅 시작으로 활성화하지 않았다.
 
@@ -30,7 +30,7 @@ python3 scripts/remote.py --ssh-config .private/lxc-ssh.conf --host DiscordBotLX
 
 공개 소스는 `/opt/changgeun-dev/source`에 전달하고 SHA256 manifest를 기록한다. `.private`·키·DB·원장·환경·로그·백업은 제외하며 목적지 삭제 동기화는 하지 않는다. 준비 도구는 build 전/후 manifest drift를 거절하고 새 이름에만 wheel/runtime/의존성 제약·바이너리 hash를 기록한다. 기존 후보는 덮어쓰지 않는다.
 
-현재 준비한k/l은 재생성하지 않는다. 다음은 **새 이름에 사용하는** LXC 준비 형식이다. `NEW_BOT`/`NEW_GATEWAY`는 실제 새 이름으로 바꿔 지정 배포 계정에서 실행한다.
+현재 준비한 k/l/m/n/o 후보는 재생성하지 않는다. 다음은 **새 이름에 사용하는** LXC 준비 형식이다. `NEW_BOT`/`NEW_GATEWAY`는 실제 새 이름으로 바꿔 지정 배포 계정에서 실행한다.
 
 ```bash
 python3 /opt/changgeun-dev/source/scripts/prepare_candidate.py --candidate NEW_BOT --component bot --youtube-audio --youtube-runtime /opt/changgeun-dev/runtimes/node-v22.23.3-linux-x64/bin/node

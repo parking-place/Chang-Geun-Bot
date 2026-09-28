@@ -2433,7 +2433,8 @@ class ChangGeunClient(discord.Client):
                 else:
                     await self.natural_input(entry, body)
             finally:
-                self.message_ledger.finish(request, "finished")
+                waiting = self.parser_v2 is not None and self.parser_v2.pending.has_root(request)
+                self.message_ledger.finish(request, "waiting" if waiting else "finished")
                 self.message_tasks.pop(request, None)
                 self.message_owners.pop(request, None)
             return

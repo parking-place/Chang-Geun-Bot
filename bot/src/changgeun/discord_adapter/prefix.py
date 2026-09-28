@@ -97,6 +97,15 @@ class MessageLedger:
                 (state, request),
             )
 
+    def finish_waiting(self, request: str, state: str) -> None:
+        if state not in {"finished", "failed", "unknown"}:
+            raise ValueError("invalid waiting completion")
+        with self.db.transaction() as conn:
+            conn.execute(
+                "UPDATE message_requests SET state=? WHERE request_id=? AND state='waiting'",
+                (state, request),
+            )
+
     def cancel_request(self, guild: str, channel: str, request: str, actor: str) -> bool:
         """Cancel only an owned, uncommitted request in one durable transaction."""
         with self.db.transaction() as conn:

@@ -129,11 +129,21 @@ class _TypedModal(discord.ui.Modal):
                 context.validator, context.guild, contexts,
             )
             await interaction.followup.send("답변을 반영했어.", ephemeral=True)
-        except (ParseError, DomainError, discord.HTTPException):
+            if (isinstance(context.source, MentionEntry)
+                    and context.source.followup.ledger is not None
+                    and not self.bridge.pending.has_root(context.root_id)):
+                context.source.followup.ledger.finish_waiting(context.root_id, "finished")
+        except (ParseError, DomainError, discord.HTTPException) as exc:
             trace = getattr(self.bridge.client, "parser_trace", None)
             if trace is not None and consumed:
+                trace.event(context.root_id, "execution.error", {
+                    "phase": "typed", "code": getattr(exc, "code", type(exc).__name__),
+                })
                 trace.outcome(context.root_id, parse_status="clarify",
                               execution_status="outcome_unknown")
+            if (consumed and isinstance(context.source, MentionEntry)
+                    and context.source.followup.ledger is not None):
+                context.source.followup.ledger.finish_waiting(context.root_id, "unknown")
             message = ("처리 결과를 확인하지 못했어. 현재 상태를 조회해줘."
                        if consumed else
                        "답변이나 요청 상태가 맞지 않아 실행하지 않았어. 새로 요청해줘.")
@@ -149,6 +159,14 @@ class _TypedView(discord.ui.View):
         super().__init__(timeout=60)
         self.bridge, self.token, self.context = bridge, token, context
         self.label, self.max_length = label, max_length
+
+    async def on_timeout(self) -> None:
+        context = self.context
+        if self.bridge.pending.cancel(
+            self.token, root_id=context.root_id, guild_id=str(context.guild.id),
+            channel_id=context.channel_id, actor_id=context.actor_id,
+        ) and isinstance(context.source, MentionEntry) and context.source.followup.ledger:
+            context.source.followup.ledger.finish_waiting(context.root_id, "failed")
 
     @discord.ui.button(label="값 입력", style=discord.ButtonStyle.primary)
     async def type_answer(self, interaction: discord.Interaction,
@@ -168,6 +186,14 @@ class _ConfirmView(discord.ui.View):
     def __init__(self, bridge: ParserV2Bridge, token: str, action: _Confirmation) -> None:
         super().__init__(timeout=300)
         self.bridge, self.token, self.action = bridge, token, action
+
+    async def on_timeout(self) -> None:
+        action = self.action
+        if self.bridge.pending.cancel(
+            self.token, root_id=action.root_id, guild_id=action.validated.guild_id,
+            channel_id=str(action.source.channel_id), actor_id=action.validated.actor_id,
+        ) and isinstance(action.source, MentionEntry) and action.source.followup.ledger:
+            action.source.followup.ledger.finish_waiting(action.root_id, "failed")
 
     @discord.ui.button(label="명령 실행 확인", style=discord.ButtonStyle.danger)
     async def confirm(self, interaction: discord.Interaction,
@@ -198,12 +224,20 @@ class _ConfirmView(discord.ui.View):
                               resolved_command=action.validated.draft.command_id,
                               executed_command=action.validated.draft.command_id)
             await interaction.followup.send("확인한 명령을 처리했어.", ephemeral=True)
-        except (ParseError, DomainError, discord.HTTPException):
+            if isinstance(action.source, MentionEntry) and action.source.followup.ledger:
+                action.source.followup.ledger.finish_waiting(action.root_id, "finished")
+        except (ParseError, DomainError, discord.HTTPException) as exc:
             trace = getattr(self.bridge.client, "parser_trace", None)
             if trace is not None and consumed:
+                trace.event(action.root_id, "execution.error", {
+                    "phase": "confirm", "code": getattr(exc, "code", type(exc).__name__),
+                })
                 trace.outcome(action.root_id, parse_status="parsed",
                               execution_status="outcome_unknown",
                               resolved_command=action.validated.draft.command_id)
+            if (consumed and isinstance(action.source, MentionEntry)
+                    and action.source.followup.ledger):
+                action.source.followup.ledger.finish_waiting(action.root_id, "unknown")
             message = ("처리 결과를 확인하지 못했어. 현재 상태를 조회해줘."
                        if consumed else
                        "요청이나 대상 상태가 달라져 실행하지 않았어. 새로 요청해줘.")
@@ -225,6 +259,11 @@ class _ConfirmView(discord.ui.View):
         ):
             await interaction.response.send_message("이 요청은 이미 종료됐어.", ephemeral=True)
             return
+        if isinstance(self.action.source, MentionEntry) and self.action.source.followup.ledger:
+            self.action.source.followup.ledger.cancel_request(
+                str(interaction.guild_id), str(interaction.channel_id),
+                self.action.root_id, str(interaction.user.id),
+            )
         await interaction.response.edit_message(content="명령을 취소했어.", view=None)
         self.stop()
 
@@ -308,6 +347,8 @@ class ParserV2Bridge:
                 trace.outcome(request_id, parse_status="clarify",
                               execution_status="waiting_typed",
                               resolved_command=partial.command_id)
+            if isinstance(source, MentionEntry) and source.followup.ledger is not None:
+                source.followup.ledger.finish(request_id, "waiting")
             await source.followup.send(
                 f"{discord.utils.escape_markdown(spec.name)} 명령의 "
                 f"{discord.utils.escape_markdown(missing)} 값을 입력해줘.",
@@ -367,6 +408,8 @@ class ParserV2Bridge:
                 trace.outcome(request_id, parse_status="parsed",
                               execution_status="waiting_confirmation",
                               resolved_command=checked.draft.command_id)
+            if isinstance(source, MentionEntry) and source.followup.ledger is not None:
+                source.followup.ledger.finish(request_id, "waiting")
             await source.followup.send(preview, view=_ConfirmView(self, token, action),
                                        ephemeral=True)
             return

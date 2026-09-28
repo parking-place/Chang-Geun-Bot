@@ -149,3 +149,28 @@ async def test_read_request_hints_still_require_jev_selection(tmp_path, utteranc
     assert result.status == 'parsed' and result.draft.command_id == identifier
     assert set(model.calls[0][3]['command']['criteria']) == {identifier, '__NONE__'}
     assert len(model.calls) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('utterance', ['들어와', '들어와줘', '여기 들어와', '입장해줘'])
+async def test_short_voice_join_uses_slash_default_channel(tmp_path, utterance):
+    db = Database(tmp_path / 'voice.sqlite')
+    db.ensure_guild('g')
+    spec = CommandSpec('C21', '입장', '허용 음성채널 입장', (
+        ArgumentSpec('채널', 'string', False, source='collection',
+                     collection='voice_channels'),
+    ), 'dj', 'write')
+
+    async def noop(_entry, _args):
+        raise AssertionError('parser must not execute')
+
+    service = CommandService({'C21': spec}, {'C21': noop})
+    actor = Actor('g', 'u', frozenset({'dj'}), 'text', voice_channel_id='voice')
+    policy = Policy(frozenset({'g'}), frozenset({'dj'}), frozenset(),
+                    frozenset({'voice'}))
+    model = Model(command='C21')
+    view = InputNormalizer().normalize(utterance)
+    result = await JevInterpreter(service, model, db, policy).interpret(
+        view, actor, root_id='voice-root', pass_id='initial', scope_hash='scope')
+    assert result.status == 'parsed' and result.draft.arguments == {}
+    assert [call[0] for call in model.calls] == ['command_select']
