@@ -152,7 +152,9 @@ async def test_read_request_hints_still_require_jev_selection(tmp_path, utteranc
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('utterance', ['들어와', '들어와줘', '여기 들어와', '입장해줘'])
+@pytest.mark.parametrize('utterance', [
+    '들어와', '들어와줘', '들어와봐', '여기 들어와', '입장해줘',
+])
 async def test_short_voice_join_uses_slash_default_channel(tmp_path, utterance):
     db = Database(tmp_path / 'voice.sqlite')
     db.ensure_guild('g')

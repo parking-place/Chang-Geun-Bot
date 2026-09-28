@@ -26,6 +26,7 @@ def test_one_retrieved_command_with_strong_distribution_can_recover_feedback():
     assert set(direct_candidates("여기 들어와", allow_admin=False)) == {"C21"}
     assert set(direct_candidates("입장해줘", allow_admin=False)) == {"C21"}
     assert set(direct_candidates("들어와줘", allow_admin=False)) == {"C21"}
+    assert set(direct_candidates("들어와봐", allow_admin=False)) == {"C21"}
 
 
 @pytest.mark.parametrize("expected,text,choice,confidence,probabilities", [

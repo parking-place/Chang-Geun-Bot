@@ -5,7 +5,7 @@ import pytest
 
 from changgeun.application.commands import CommandService
 from changgeun.discord_adapter import parser_v2
-from changgeun.domain.models import Actor, Policy
+from changgeun.domain.models import Actor, DomainError, Policy
 from changgeun.parser.contracts import CommandDraft
 from changgeun.parser.normalizer import InputNormalizer
 from changgeun.parser.registry import ArgumentSpec, CommandSpec
@@ -133,6 +133,47 @@ async def test_confirmation_button_is_owned_and_single_use():
     again = component('u')
     await buttons.children[0].callback(again)
     assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_confirmed_callback_error_never_claims_success():
+    actor = Actor('g', 'u', frozenset({'dj'}), 'c')
+
+    async def fresh(_):
+        return actor
+
+    async def member(_):
+        return SimpleNamespace(id='u')
+
+    async def rejected(*args, **kwargs):
+        raise DomainError('same_voice_required')
+
+    events = []
+    response = SimpleNamespace(done=False)
+    response.is_done = lambda: response.done
+
+    async def defer(**kwargs):
+        response.done = True
+
+    async def send(content, **kwargs):
+        events.append(content)
+
+    response.defer = defer
+    response.send_message = send
+    interaction = SimpleNamespace(guild_id='g', channel_id='c',
+                                  user=SimpleNamespace(id='u'), response=response,
+                                  followup=SimpleNamespace(send=send))
+    guild = SimpleNamespace(fetch_member=member)
+    source = SimpleNamespace(guild=guild)
+    bridge = parser_v2.ParserV2Bridge(SimpleNamespace(fresh_actor=fresh))
+    view = InputNormalizer().normalize('들어와')
+    validated = ValidatedCommand(CommandDraft('C21', {}, {}), {}, 'g', 'u', True)
+    action = parser_v2._Confirmation(validated, source, source, view, 'r', 'initial',
+                                     'scope', SimpleNamespace(invoke=rejected), guild)
+    token = bridge.pending.issue(kind='confirm', root_id='r', guild_id='g', channel_id='c',
+                                 actor_id='u', command_id='C21', payload=action)
+    await parser_v2._ConfirmView(bridge, token, action).children[0].callback(interaction)
+    assert events == ['봇과 같은 허용 음성채널에 들어간 뒤 다시 요청해줘.']
 
 
 @pytest.mark.asyncio

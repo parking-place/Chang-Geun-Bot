@@ -57,6 +57,7 @@ class _BoundMentionEntry(MentionEntry):
         self.__dict__.update(source.__dict__)
         self.request_id = root_id
         self.__dict__["id"] = root_id
+        self.parser_v2_bound = True
 
 
 @dataclass(frozen=True)
@@ -241,6 +242,10 @@ class _ConfirmView(discord.ui.View):
             message = ("처리 결과를 확인하지 못했어. 현재 상태를 조회해줘."
                        if consumed else
                        "요청이나 대상 상태가 달라져 실행하지 않았어. 새로 요청해줘.")
+            if isinstance(exc, DomainError):
+                from changgeun.discord_adapter.client import ERRORS
+
+                message = ERRORS.get(exc.code, message)
             if not interaction.response.is_done():
                 await interaction.response.send_message(message, ephemeral=True)
             else:

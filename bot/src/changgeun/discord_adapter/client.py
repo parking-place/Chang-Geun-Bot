@@ -1152,6 +1152,8 @@ class ChangGeunClient(discord.Client):
             else:
                 await interaction.followup.send(content, ephemeral=True)
         except DomainError as exc:
+            if getattr(interaction, "parser_v2_bound", False):
+                raise
             if exc.code == "confirmation_required":
                 token = self.executor.preview(plan, actor or await self.fresh_actor(interaction))
                 preview = "선택한 항목을 변경할게. 60초 안에 확인해줘."
@@ -1804,6 +1806,8 @@ class ChangGeunClient(discord.Client):
                     actor=actor,
                 )
             except DomainError as exc:
+                if getattr(interaction, "parser_v2_bound", False):
+                    raise
                 await interaction.followup.send(
                     ERRORS.get(exc.code, "채널을 다시 선택해줘."), ephemeral=True
                 )
