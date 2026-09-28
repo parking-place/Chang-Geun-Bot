@@ -1,6 +1,6 @@
 # 05 — 신규 gateway 계약·영속 예산·기한·취소
 
-- 상태: **PLANNED**
+- 상태: **IN_PROGRESS — 별도 영속 원장·선택형 엔드포인트 개발시험 완료, 실제 provider/배포 연결 대기**
 - 선행: [01 계약](01_baseline_and_contracts.md), [02 등록부](02_registry_and_command_service.md).
 - 명세: 1.2·6.1·10·12.6·15.16. 시험: R120-10/11.
 

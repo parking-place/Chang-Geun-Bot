@@ -119,6 +119,7 @@ class CallResponse(StrictModel):
     usage: TokenUsage = Field(default_factory=TokenUsage)
     model: str | None = None
     error_code: str | None = None
+    cache_hit: bool = False
 
     @model_validator(mode="after")
     def result_status(self) -> CallResponse:

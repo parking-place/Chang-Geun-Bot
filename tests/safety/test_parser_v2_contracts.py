@@ -1,8 +1,11 @@
+import json
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
 from changgeun_inference.contracts import DecisionRequest
-from changgeun_inference.contracts_v2 import ParseCall, RootRequest, TokenUsage
+from changgeun_inference.contracts_v2 import CallResponse, ParseCall, RootRequest, TokenUsage
 
 
 def root():
@@ -40,3 +43,9 @@ def test_limits_never_trim_actual_list_and_usage_is_not_fabricated():
                     {"input_tokens": 3, "output_tokens": 2, "total_tokens": 6}):
         with pytest.raises(ValidationError):
             TokenUsage(**invalid)
+
+
+def test_response_schema_matches_public_contract():
+    schema = json.loads(Path('shared/schemas/parser-response-v2.json').read_text())
+    schema.pop('$schema', None)
+    assert schema == CallResponse.model_json_schema()

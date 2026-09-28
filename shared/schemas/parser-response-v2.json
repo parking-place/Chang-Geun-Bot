@@ -160,6 +160,11 @@
       ],
       "default": null,
       "title": "Error Code"
+    },
+    "cache_hit": {
+      "default": false,
+      "title": "Cache Hit",
+      "type": "boolean"
     }
   },
   "required": [

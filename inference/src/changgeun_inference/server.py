@@ -10,14 +10,17 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from changgeun_inference.config import read_profile
 from changgeun_inference.contracts import DecisionRequest
+from changgeun_inference.contracts_v2 import ParseCall
 from changgeun_inference.ledger import Ledger
 from changgeun_inference.providers import HostedProvider, MockProvider, Provider
 from changgeun_inference.service import DecisionService, ServiceError
+from changgeun_inference.service_v2 import ParserService
 
 
 class RequestBoundary:
@@ -61,13 +64,20 @@ class RequestBoundary:
         await self.app(scope, replay, send)
 
 
-def create_app(service: DecisionService, token: str) -> FastAPI:
+class CancelParserRequest(BaseModel):
+    request_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def create_app(service: DecisionService, token: str,
+               parser_service: ParserService | None = None) -> FastAPI:
     if len(token) < 32:
         raise ValueError("internal token must have at least 32 characters")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
         yield
+        if parser_service is not None:
+            parser_service.drain()
         await service.drain()
         if isinstance(service.provider, HostedProvider):
             await service.provider.close()
@@ -79,7 +89,8 @@ def create_app(service: DecisionService, token: str) -> FastAPI:
         redoc_url=None,
         openapi_url=None,
     )
-    app.add_middleware(RequestBoundary, token=token)
+    app.add_middleware(RequestBoundary, token=token,
+                       max_body=196608 if parser_service is not None else 32768)
 
     def authenticate(authorization: str) -> None:
         if not hmac.compare_digest(authorization, "Bearer " + token):
@@ -115,6 +126,28 @@ def create_app(service: DecisionService, token: str) -> FastAPI:
             return await service.decide(request)
         except ServiceError as exc:
             raise HTTPException(exc.status, exc.code) from exc
+
+    if parser_service is not None:
+        @app.get("/v2/usage")
+        async def parser_usage(authorization: str = Header(default="")) -> dict[str, Any]:
+            authenticate(authorization)
+            return parser_service.ledger.usage(parser_service.run_id)
+
+        @app.post("/v2/parse")
+        async def parse(call: ParseCall,
+                        authorization: str = Header(default="")) -> dict[str, Any]:
+            authenticate(authorization)
+            try:
+                return await parser_service.parse(call)
+            except ServiceError as exc:
+                raise HTTPException(exc.status, exc.code) from exc
+
+        @app.post("/v2/cancel")
+        async def cancel_parser(request: CancelParserRequest,
+                                authorization: str = Header(default="")) -> dict[str, str]:
+            authenticate(authorization)
+            parser_service.cancel(request.request_id)
+            return {"status": "cancelled"}
 
     return app
 
