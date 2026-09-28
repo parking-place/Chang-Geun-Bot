@@ -71,3 +71,10 @@
 - 업무 DB·gateway 예산 원장과 분리된 private SQLite/WAL trace-v2 파일을 추가했다. 최초 수신 시각과 정확한 7일 만료는 UPDATE trigger로 불변이며 모든 구현 조회가 만료를 필터한다. 시작 시 만료 부모·자식을 cascade 삭제하고 알 수 없는 기존 스키마는 자동 덮어쓰지 않는다. 입력·이벤트는 secret key/value/URL query를 제한적으로 마스킹한 후 저장한다. `executed_command`는 서비스 전달을 기록할 때만 설정하고 확인 대기는 null로 둘 수 있다.
 - 지정 DiscordBotLXC 격리 파일에서 경계 전/정확히 만료/삭제, TTL 불변, 호출·이벤트 요청 소속, 중복 call 거부, usage token 부분집합, 비밀 문자열 기본 마스킹, 미확인 usage, 기존 스키마 거부의 신규4시험 PASS. Ruff/mypy PASS. 이 시험에서 원격 모델 호출0·실제 지출0.
 - 제한: 로거는 아직 활성 봇·gateway에 연결되지 않았다. bounded writer/매시간 정리·모든 사본/내보내기·실제 시크릿 전체 패턴·관리자 화면·trace v1 이관은 **NOT_RUN**이다. `secure_delete`와 조회 차단만으로 물리 사본 삭제를 보증하지 않으며 외부 백업 검증은 사용자 지정대로 SKIPPED다.
+
+## p11 — 동일 후보의 소스·설치 wheel 회귀 체크포인트
+
+- 고정 입력: p10 제품 소스 commit `8ee7006`, 공개 소스 manifest SHA256 `802cd2c6a813b3426625428accdb1b8973ebd46428fabcd493f8d217dee09c03`. DiscordBotLXC 전용 격리 경로 `/opt/changgeun-dev/p11-8ee7006/`에서 setuptools 84.0.0 격리 빌드로 새 wheel을 생성했다. bot wheel SHA256 `fd425c5aac4d6d085c0e1c0c80ccc02bc253efc7fa1bd0599b89e4e37a7c7400`, inference wheel SHA256 `99a78b56ad1ddc6acff313764183f585abe12479d37a9a755102770d8ccf44b9`.
+- 지정 LXC에서 `PYTHONPATH=bot/src:inference/src` 소스 우선 `pytest tests -q` **476 PASS**, 전체 Ruff PASS, mypy `bot/src inference/src` **64파일 PASS**. 새 wheel은 기존 서비스/venv를 건드리지 않는 `site` 격리 경로에 `pip install --no-deps --no-index --target`로 설치했다. 두 패키지 import가 그 설치 경로를 가리키는 것을 확인하고 `PYTHONPATH=/opt/changgeun-dev/p11-8ee7006/site`로 같은 `pytest tests -q` **476 PASS**를 실행했다. Discord 라이브러리의 deprecation warning268건은 남았다.
+- 기존 `changgeun-dev-bot`와 `changgeun-jev-api`는 시험 뒤 모두 active였다. 새 wheel 적용/봇 전환은 하지 않았다. 최초 빌드 시 기존 개발 venv에 setuptools가 없어 `--no-isolation` 시도가 실패했고, 격리 빌드로 해결했다. 신규 wheel venv에는 pytest가 없어 그 시도는 시험 결과로 세지 않았으며, 위 `--target` 검증만 PASS로 기록했다.
+- **NOT_RUN:** C01~C47/I01~I08 옵션·UI 전수 대응, 신규 독립221문장과 정답잠금·실제 Jev/GPT 통합 품질·지연/비용, synthetic shadow 및 trace 이관/복귀. GPT 실호출·실제지출은 이번 단계까지0이고 사용자 지정 누적US$1 상한을 유지한다. 이전 실패·백업 검증 SKIPPED는 변경하지 않는다.

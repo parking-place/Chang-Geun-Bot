@@ -1,6 +1,6 @@
 # 11 — LXC 독립 평가와 이관·복귀 검증
 
-- 상태: **PLANNED — 제품 시험·API 호출·이관을 실행하지 않은 계획**
+- 상태: **IN_PROGRESS — p11 소스/새 설치 wheel 전수 회귀는 실행, 독립 평가·API 실호출·이관은 NOT_RUN**
 - 책임: R120-27~30. 선행: 01~10의 계약·구현 후보와 제한 설정 준비.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12·13·15.15·15.16, [시험표](TEST_MATRIX.md).
 - 실행 위치: 모든 제품 lint·타입·단위/mock·통합·실제 모델·DB 시험은 DiscordBotLXC만 사용한다.
@@ -15,6 +15,8 @@
 [1.1.8 개발 증거](../../../evidence/public/patch-118-development-20260928.md)의 45/46은 개발 예문 의도 ID 성적이다. 369개 회귀, 과거 독립 평가 실패, 실제 Discord 미인수도 각각 별도 이력으로 유지하며 신규 독립 성적으로 전환하지 않는다.
 
 ## R120-27 — 소스·wheel·전수 회귀
+
+2026-09-28 p11 개발 체크포인트에서 같은 공개 소스 manifest와 신규 bot/gateway wheel을 DiscordBotLXC 격리 경로에 빌드했다. 소스 우선 476/476, 신규 설치 wheel을 우선 import한 경로 476/476, 전체 Ruff·mypy64파일이 통과했다. [실행 기록](../../../evidence/public/reconstruction-120-progress.md)의 SHA·명령을 참조한다. 이 결과는 R120-27의 기존 테스트 회귀 근거이며 공개 옵션·상호작용 전수 대응이나 아래 R120-28~30 게이트를 닫지 않는다.
 
 1. 변경 전후 manifest·wheel SHA·의존성·설정 지문·registry/normalizer/prompt/schema 버전을 고정한다. 비밀값은 지문 입력·보고서에서 제외한다.
 2. 현재 등록된 C01~C47과 I01~I08의 명령·옵션·선택/확인·화면 대응표를 재검사한다. C39는 자연어 진입점이며 다시 자기 자신을 모델 후보로 실행하지 않는다.
