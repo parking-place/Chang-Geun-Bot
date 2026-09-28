@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import secrets
 from dataclasses import dataclass
 from typing import Any
@@ -69,6 +70,9 @@ def _value(text: str, arg: ArgumentSpec,
                  else selected.item.object_id)
         return value, selected.token
     if arg.kind == "integer":
+        digits = re.fullmatch(r"([+-]?\d+)(?:번|개|곡|초)?", text)
+        if digits is not None:
+            return int(digits[1]), None
         view = InputNormalizer().normalize(text)
         parsed_numbers = numbers(view)
         if len(parsed_numbers) != 1 or parsed_numbers[0].evidence.raw != text:

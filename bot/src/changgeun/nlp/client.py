@@ -92,6 +92,25 @@ class GatewayClient:
         finally:
             self.metrics.duration("gateway_ready", time.monotonic() - observed_at)
 
+    async def parser_ready(self, llm_profile: str) -> None:
+        """Fail startup closed when the explicitly selected v2 profile is absent."""
+        if llm_profile not in {"disabled", "gpt-5-nano"}:
+            raise ValueError("invalid parser LLM profile")
+        await self.ready()
+        client = await self._http()
+        async with client.stream(
+            "GET", self.base_url + "/health",
+            headers={"Authorization": "Bearer " + self.token}, timeout=2,
+        ) as response:
+            response.raise_for_status()
+            result = await self._bounded_json(response)
+        if (result.get("ready"), result.get("provider"), result.get("profile_id"),
+                result.get("config_hash"), result.get("parser_v2_ready"),
+                result.get("parser_llm_profile")) != (
+                    True, self.provider, self.profile_id, self.config_hash,
+                    True, llm_profile):
+            raise DomainError("inference_profile_mismatch")
+
     async def usage(self) -> dict[str, int]:
         """Authenticated bounded read; shared-run values are never guild attribution."""
         if self._closed or self._file_version() != self._credential_version:

@@ -152,3 +152,28 @@ def test_typed_reply_does_not_reinterpret_command_or_other_argument():
     with pytest.raises(ParseError, match='pending_unknown_or_used'):
         store.consume(replacement, kind='confirm', **attrs)
     assert store.consume(newer, kind='confirm', **attrs).command_id == 'C20'
+
+
+def test_typed_zero_large_integer_and_false_remain_explicit():
+    store = PendingStore()
+    attrs = dict(root_id='r', guild_id='g', channel_id='c', actor_id='u')
+    spec = CommandSpec('C20', '범위', '값', (
+        ArgumentSpec('횟수', 'integer', True, minimum=0, maximum=10000),
+        ArgumentSpec('교체', 'boolean', True),
+    ), 'dj', 'write')
+    draft = CommandDraft('C20', {}, {})
+    first = store.issue(kind='typed', command_id='C20', argument='횟수',
+                        payload=TypedQuestion(draft), **attrs)
+    parsed, _ = answer_typed(store.consume(first, kind='typed', **attrs), '0', spec,
+                             guild_id='g', channel_id='c', actor_id='u')
+    assert parsed.arguments['횟수'] == 0
+    second = store.issue(kind='typed', command_id='C20', argument='횟수',
+                         payload=TypedQuestion(draft), **attrs)
+    parsed, _ = answer_typed(store.consume(second, kind='typed', **attrs), '1234', spec,
+                             guild_id='g', channel_id='c', actor_id='u')
+    assert parsed.arguments['횟수'] == 1234
+    third = store.issue(kind='typed', command_id='C20', argument='교체',
+                        payload=TypedQuestion(parsed), **attrs)
+    parsed, _ = answer_typed(store.consume(third, kind='typed', **attrs), '아니요', spec,
+                             guild_id='g', channel_id='c', actor_id='u')
+    assert parsed.arguments['교체'] is False

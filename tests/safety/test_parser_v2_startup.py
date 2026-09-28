@@ -38,6 +38,7 @@ hosted:
         response = await client.get('/health', headers={'Authorization': 'Bearer ' + 't' * 40})
         assert response.status_code == 200
         assert response.json()['parser_v2_ready'] is False
+        assert response.json()['parser_llm_profile'] == 'disabled'
         assert (await client.post('/v2/parse', headers={
             'Authorization': 'Bearer ' + 't' * 40}, json={})).status_code == 404
 
@@ -46,7 +47,9 @@ hosted:
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=captured[-1]),
                                 base_url='http://test') as client:
         headers = {'Authorization': 'Bearer ' + 't' * 40}
-        assert (await client.get('/health', headers=headers)).json()['parser_v2_ready'] is True
+        health = (await client.get('/health', headers=headers)).json()
+        assert health['parser_v2_ready'] is True
+        assert health['parser_llm_profile'] == 'disabled'
         usage = await client.get('/v2/usage', headers=headers)
         assert usage.status_code == 200
         assert usage.json()['gpt_reserved_micro_usd'] == 0

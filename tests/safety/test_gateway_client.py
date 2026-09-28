@@ -55,6 +55,29 @@ async def test_health_singleflight_cache_binding_and_client_close(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_parser_profile_startup_readiness_requires_exact_v2(tmp_path):
+    config = config_for(tmp_path)
+    state = {"parser_v2_ready": True, "parser_llm_profile": "disabled"}
+
+    def handle(request):
+        return httpx.Response(200, json={
+            "ready": True, "provider": config["provider"],
+            "profile_id": config["profile_id"],
+            "config_hash": config["config_hash"], **state,
+        })
+
+    client = GatewayClient(config, transport=httpx.MockTransport(handle))
+    await client.parser_ready("disabled")
+    state["parser_v2_ready"] = False
+    with pytest.raises(DomainError, match="inference_profile_mismatch"):
+        await client.parser_ready("disabled")
+    state.update(parser_v2_ready=True, parser_llm_profile="gpt-5-nano")
+    with pytest.raises(DomainError, match="inference_profile_mismatch"):
+        await client.parser_ready("disabled")
+    await client.close()
+
+
+@pytest.mark.asyncio
 async def test_streaming_response_rejects_over_limit_before_remaining_chunks(tmp_path):
     chunks = []
 

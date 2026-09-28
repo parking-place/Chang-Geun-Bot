@@ -91,3 +91,10 @@
 - 격리된 v2 bridge는 원문 body→ParserSession/Jev→공통 검증기→기존 CommandService callback 경로를 연결한다. 모델은 실행기를 선택하지 못한다. 읽기 명령 C01의 대역 실행을 확인했고, 쓰기는 300초 확인 버튼/단회 token·fresh actor/목록 재검증을 거친다. 다른 사용자 클릭이 토큰이나 버튼을 소모하지 않도록 수정했다. 접두어 실행 콜백에는 admitted request ID를 전달해 기존 업무 멱등성을 사용한다.
 - 지정 DiscordBotLXC 소스 **480 PASS**, Ruff PASS, mypy **65파일 PASS**. 새 격리 설치 wheel에서 두 패키지 import 경로를 확인하고 동일 **480 PASS**. 제품 소스·시험 manifest SHA256 `665f99feafba194c7e9bda4813a8cd5c21632bc652f6bcc073d92b76a5f75db5`(시험 import 순서 정리 뒤 최종 동기화); bot wheel SHA256 `d68bd5fd1e2581609adb02a7282e395e370fec0e71b5299bc73ad31523b606d1`, gateway wheel SHA256 `2a7ca9db82010d0c510595490291a755fa41a946ccc44f627f2fa1e38f46e854`.
 - **NOT_RUN:** 실제 Jev/GPT·비용, typed 60초 Discord 질문 UI, C01~C47/I01~I08 전수 옵션·confirmation parity, 전체 주시/voice 경합, 독립221 품질, trace 운영 연결·이관, 실제 Discord 조작/청취·후보 전환. 이 bridge는 기본 비활성이므로 소스/대역 통과를 활성 봇 인수로 읽지 않는다. GPT 실호출·지출0, 사용자 지정 US$1 상한 유지.
+
+## p12b — 한 인수 typed 모달과 gateway 프로필 결합 체크포인트
+
+- Jev 인수 묶음에서 필수값 하나만 누락되고 미래의 의존 인수가 없으면 원래 root/command/pass와 나머지 검증 가능한 인수를 보존한 부분 초안을 낸다. Discord는 60초 owner-only 모달을 제공한다. 답변은 해당 인수 타입으로만 결정적으로 해석하고 `TrustedContext`로 원 요청자·서버·채널·인수·값에 결합한다. 후속 모델 호출은 없다. 쓰기는 별도의 300초 단회 확인 뒤 fresh actor/목록 검증을 다시 거친다. 여러 필수값 누락이나 의존 인수는 자동 보완하지 않는다.
+- 봇의 v2 opt-in 시작은 gateway 인증 health의 v2 readiness와 `disabled`/`gpt-5-nano` 프로필 일치 확인에 묶었다. v1 서비스에는 새 검사를 적용하지 않는다. 키 없는 disabled/프로필 불일치 시험을 LXC 대역에서 수행했다. 실제 활성 프로필·서비스는 변경하지 않았다.
+- 지정 DiscordBotLXC의 같은 공개 소스 manifest SHA256 `58e43be574967f0f7eb5b56ea389208da1ec2466d31e48af2f29b822d22708a5`에서 source·새 격리 설치 wheel 각각 **483 PASS**, 전체 Ruff PASS·mypy65파일 PASS. wheel import가 격리 `site`를 가리켰다. bot wheel SHA256 `89e9e474a445e344d988f012499d6d65176f546d6e549c408234008c42b6fe1e`, gateway wheel SHA256 `a3a0af4563548ce2a0864e93e43d1e67aa33ca4beb20d993c7c45ad95313896b`.
+- **NOT_RUN:** 다중/의존 인수 typed 해소·실제 목록 동명 선택 UI, 전체47명령/8후속 parity, 실제 Jev/GPT 실호출 및 비용(누적0/US$1 상한), 독립221·trace 운영/이관·실제 Discord 청취/조작·활성 전환/복귀. p12b는 개발 후보이며 버전 완료/출시가 아니다.

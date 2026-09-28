@@ -165,6 +165,7 @@ class JevInterpreter:
         arguments: dict[str, Any] = {}
         evidence: dict[str, Evidence] = {}
         for stage_index in (2, 3):
+            missing: list[str] = []
             pending = [argument for argument in spec.arguments
                        if (argument.depends_on is None) == (stage_index == 2)]
             if not pending:
@@ -197,41 +198,54 @@ class JevInterpreter:
                 except ParseError as exc:
                     if exc.code == "optional_unmentioned":
                         continue
-                    if exc.code in {"missing_argument", "source_candidate_overflow"}:
+                    if exc.code == "missing_argument":
+                        missing.append(argument.name)
+                        continue
+                    if exc.code == "source_candidate_overflow":
                         return ParserOutcome("clarify", code=exc.code,
                                              missing=(argument.name,))
                     raise
                 question_key = f"arg_{argument.name}"
                 questions[question_key] = choices.question
                 prepared[question_key] = (argument, choices)
-            if not questions:
-                continue
-            result = await self.model.call(
-                "argument_select" if stage_index == 2 else "context_select",
-                {**state, "selected_command": spec.name}, pass_id=pass_id,
-                stage_index=stage_index, questions=questions,
-            )
-            answers = result.get("answers")
-            if not isinstance(answers, dict) or answers.keys() != questions.keys():
-                raise ParseError("invalid_jev_response")
-            for key, (argument, choices) in prepared.items():
-                token = _selected(answers[key], choices.question["criteria"])
-                if token in SENTINELS:
-                    if token == "__MISSING__" and not argument.required:
+            if questions:
+                result = await self.model.call(
+                    "argument_select" if stage_index == 2 else "context_select",
+                    {**state, "selected_command": spec.name}, pass_id=pass_id,
+                    stage_index=stage_index, questions=questions,
+                )
+                answers = result.get("answers")
+                if not isinstance(answers, dict) or answers.keys() != questions.keys():
+                    raise ParseError("invalid_jev_response")
+                for key, (argument, choices) in prepared.items():
+                    token = _selected(answers[key], choices.question["criteria"])
+                    if token in SENTINELS:
+                        if token == "__MISSING__" and not argument.required:
+                            continue
+                        if token == "__NO_MATCH__":
+                            return ParserOutcome("failed", code="no_match",
+                                                 missing=(argument.name,))
+                        missing.append(argument.name)
                         continue
-                    return ParserOutcome("clarify" if token != "__NO_MATCH__" else "failed",
-                                         code=token.lower().strip("_"),
-                                         missing=(argument.name,))
-                value, proof = choices.values[token]
-                if choices.snapshot is not None:
-                    chosen = choices.snapshot.select(
-                        token, root_id=root_id, pass_id=pass_id,
-                        argument=argument.name, scope_hash=scope_hash,
-                        revision=choices.snapshot.revision,
-                    )
-                    value = chosen.execution_value if chosen.execution_value is not None else (
-                        chosen.object_id)
-                arguments[argument.name], evidence[argument.name] = value, proof
+                    value, proof = choices.values[token]
+                    if choices.snapshot is not None:
+                        chosen = choices.snapshot.select(
+                            token, root_id=root_id, pass_id=pass_id,
+                            argument=argument.name, scope_hash=scope_hash,
+                            revision=choices.snapshot.revision,
+                        )
+                        value = chosen.execution_value if chosen.execution_value is not None else (
+                            chosen.object_id)
+                    arguments[argument.name], evidence[argument.name] = value, proof
+            if missing:
+                # A typed reply can complete only one unresolved value. Never call the
+                # model again after that reply or assume dependent values were answered.
+                future = stage_index == 2 and any(a.depends_on for a in spec.arguments)
+                partial = (CommandDraft(spec.identifier, arguments, evidence,
+                                        parser_source="jev_" + pass_id)
+                           if len(missing) == 1 and not future else None)
+                return ParserOutcome("clarify", partial, code="missing_argument",
+                                     missing=tuple(missing))
         return ParserOutcome("parsed", CommandDraft(
             spec.identifier, arguments, evidence,
             parser_source="jev_" + pass_id,

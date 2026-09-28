@@ -176,6 +176,15 @@ class ParserOrchestrator:
                         parser_source="jev_after_rewrite", llm_assisted=True,
                     ))
                 if after.status != "failed" or after.code in _TERMINAL_FAILURES:
+                    if after.draft is not None:
+                        draft = after.draft
+                        return ParserOutcome(
+                            after.status, CommandDraft(draft.command_id, draft.arguments,
+                                                       draft.evidence,
+                                                       parser_source="jev_after_rewrite",
+                                                       llm_assisted=True),
+                            code=after.code, missing=after.missing, options=after.options,
+                        )
                     return after
             else:
                 self._event(root_id, "stage.skipped", reason="unchanged_or_invalid_rewrite")

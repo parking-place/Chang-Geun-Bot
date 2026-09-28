@@ -112,6 +112,10 @@ def create_app(service: DecisionService, token: str,
             "profile_id": service.profile_id,
             "config_hash": service.config_hash,
             "parser_v2_ready": parser_service is not None and not parser_service.closed,
+            "parser_llm_profile": (
+                "disabled" if parser_service is None or parser_service.llm_reservation is None
+                else "gpt-5-nano"
+            ),
         }
 
     @app.get("/v1/usage")

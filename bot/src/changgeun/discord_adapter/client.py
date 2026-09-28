@@ -708,6 +708,9 @@ class ChangGeunClient(discord.Client):
             self.parser_v2 = ParserV2Bridge(self)
 
     async def setup_hook(self) -> None:
+        if self.parser_v2 is not None:
+            assert self.gateway is not None
+            await self.gateway.parser_ready(self.config.parser_llm_fallback)
         self.message_ledger.recover()
         self.watch.recover()
         self.audio.recover(self.config.policy.guild_ids)
