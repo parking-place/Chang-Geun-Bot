@@ -12,6 +12,8 @@
 
 > 한국어 자연어 명령을 지원하는 창팝 플레이리스트 디스코드 봇
 
+> 후속1.2.0은 [재구성12단계](2.%20ReconstructionPhase/1.2.0/README.md)와 [결정0010](../docs/decisions/0010-reconstruction-parser-plan.md)의 PLANNED 범위다. Jev에 실제 목록을 전달하고 GPT rewrite/full_parse를 추가하는 새 구조이며, 이 문서의 기존 Jev전용 실행·API1.2·예산을 계획만으로 변경하지 않는다.
+
 | 항목 | 내용 |
 | --- | --- |
 | 문서 버전 | 1.3 |

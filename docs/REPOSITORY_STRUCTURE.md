@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | `Plans/` | 현재명세1.3·Dev14버전/70단계·Patch9버전/45단계·시험/출시기준 | Jev API 전용, 명세1.1/1.2는 과거 기록 |
 | `Plans/1.PatchPhase/` | 1.1.0~1.1.8: 기존26개+신규6개 항목·버전별5단계·배정/상태/시험 | 1.1.0~1.1.7 부분 개발/LXC 시험, 1.1.8 소스 후보·부분 개발 시험 |
+| `Plans/2. ReconstructionPhase/` | 사용자 해석기 명세와1.2.0의12단계·아키텍처·배정·시험·상태 | PLANNED: 실제 목록 전달·Jev/LLM·7일로그, 현재 실행 계약 변경 없음 |
 | `bot/src/changgeun/` | Discord·권한/확인·SQLite·재생·NLP | 개발 구현·부분 LXC 시험, 전체 인수 전 |
 | `inference/src/changgeun_inference/` | Jev API 전용 TLS gateway·원장·단일전송 | local 설정/모델 경로 제거·격리mock 유지 |
 | `shared/schemas/` | API1.2 요청·응답 JSON Schema | 엄격 런타임 계약에서 생성, cross-field검증 추가 |

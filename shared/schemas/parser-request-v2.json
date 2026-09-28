@@ -1,0 +1,170 @@
+{
+  "$defs": {
+    "Question": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "choice",
+            "noul"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "instructions": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Instructions",
+          "type": "string"
+        },
+        "criteria": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Criteria",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "instructions"
+      ],
+      "title": "Question",
+      "type": "object"
+    },
+    "RootRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "parser-api-v2",
+          "default": "parser-api-v2",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[A-Za-z0-9_-]{1,128}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "scope_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Scope Hash",
+          "type": "string"
+        },
+        "original_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Original Hash",
+          "type": "string"
+        },
+        "config_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Config Hash",
+          "type": "string"
+        },
+        "created_at": {
+          "title": "Created At",
+          "type": "number"
+        },
+        "expires_at": {
+          "title": "Expires At",
+          "type": "number"
+        }
+      },
+      "required": [
+        "request_id",
+        "scope_hash",
+        "original_hash",
+        "config_hash",
+        "created_at",
+        "expires_at"
+      ],
+      "title": "RootRequest",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "root": {
+      "$ref": "#/$defs/RootRequest"
+    },
+    "call_id": {
+      "pattern": "^[A-Za-z0-9_-]{1,128}$",
+      "title": "Call Id",
+      "type": "string"
+    },
+    "operation": {
+      "enum": [
+        "command_select",
+        "argument_select",
+        "context_select",
+        "rewrite",
+        "full_parse"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "pass_id": {
+      "anyOf": [
+        {
+          "enum": [
+            "initial",
+            "after_rewrite"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pass Id"
+    },
+    "stage_index": {
+      "anyOf": [
+        {
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stage Index"
+    },
+    "state": {
+      "additionalProperties": true,
+      "title": "State",
+      "type": "object"
+    },
+    "questions": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Question"
+      },
+      "title": "Questions",
+      "type": "object"
+    },
+    "output_schema": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output Schema"
+    }
+  },
+  "required": [
+    "root",
+    "call_id",
+    "operation",
+    "state"
+  ],
+  "title": "ParseCall",
+  "type": "object"
+}

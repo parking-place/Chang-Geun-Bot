@@ -18,9 +18,12 @@
 
 ## 먼저 읽을 문서
 
+후속 [1.2.0 재구성 계획](Plans/2.%20ReconstructionPhase/1.2.0/README.md)은12단계 **PLANNED**입니다. 실제 목록을 Jev에 전달하는 선택 방식, GPT 재작성·최종 해석, 공통 검증과7일 로그를 계획합니다. 현재 Jev 전용 실행은 유지하며 [결정0010](docs/decisions/0010-reconstruction-parser-plan.md)에 새 범위와 이관 계약을 구분했습니다.
+
 - [개발 명세 1.3](Plans/CHANGGEUN_DEVELOPMENT_SPEC_v1.3.md)
 - [0.0.0 → 1.0.3 버전별 계획](Plans/0.DevPhase/README.md)
 - [1.1.0 → 1.1.8 계획: 기능·Jev 최적화·안정화](Plans/1.PatchPhase/README.md)
+- [1.2.0 재구성: 12단계·요구사항·시험·상태](Plans/2.%20ReconstructionPhase/1.2.0/README.md)
 - [현재 진행 현황](Plans/0.DevPhase/STATUS.md)
 - [Jev API 전용 계약](Plans/0.DevPhase/INFERENCE_PROFILES.md)
 - [개발·검증 환경](Plans/0.DevPhase/ENVIRONMENT.md)

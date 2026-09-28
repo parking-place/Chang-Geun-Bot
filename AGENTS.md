@@ -9,6 +9,7 @@
 - 1.0.3 주시 채널 관리는 사용자 구현 요청으로 IN_PROGRESS다. `docs/decisions/0007-watch-channel-management.md`와 해당 버전5단계·실행 증거를 따른다. 구현/개발 후보와 W 전건 실제 인수·정식 출시를 구분한다. 기존 DB/바이너리 복귀 묶음과 gateway 예산을 보존한다.
 - 1.1.0~1.1.8 후속 계획은 `Plans/1.PatchPhase/`의 README·EXECUTION_RULES·ITEM_COVERAGE·STATUS·TEST_MATRIX와 해당 버전 README를 따른다. 모두 개발 후보·부분 시험 진행 중이며 최신 실행 결과는 STATUS를 확인한다. 1.1.8은 소스/휠 후보 개발 단계이고 활성 봇에는 미적용이다. 전체 명령의 자연어 입력은 `docs/decisions/0009-all-command-natural-language-plan.md`의 후속 설계를 따른다. 계획/부분 시험만으로 실행 계약·배포·정식 VERSION·태그·DONE을 바꾸지 않는다. 기존 미완료 인수와 후보별 증거를 유지한다.
 - 사용자의 요청 범위를 따른다. 구현·시험 증거 없이 제품 `VERSION`, 출시 태그, 완료 상태를 만들지 않는다.
+- 1.2.0 재구성은 `Plans/2. ReconstructionPhase/1.2.0/`의 README·ARCHITECTURE·REQUIREMENTS·STATUS·TEST_MATRIX와12단계를 먼저 읽는다. 원본 해석기 명세v1.3과 `docs/decisions/0010-reconstruction-parser-plan.md`를 함께 적용한다. 전 단계PLANNED다. 사용자 후속 지시에 따라 재생목록/곡/채널처럼 열거 가능한 인수는 실제 권한범위 전체 목록을 전달하고, 새 이름/검색어만 원문 추출한다. 목록을 임의top-k/잘림으로 대체하지 않는다.
 
 ## 비공개 정보와 데이터
 
@@ -30,4 +31,5 @@
 - `bot`은 Discord·DB·재생·권한·공통 실행기, `inference`는 공통 판단 API·원장·제공자 어댑터다. 모델은 동작을 실행하지 않는다.
 - 실제 제공자는 `jev-api`만 지원한다. `docs/decisions/0005-jev-api-only.md`를 따른다. `mock`은 지정 LXC의 격리 시험 전용이며 실제 Discord에 활성화하지 않는다. 로컬 모델 경로/의존성을 새 실행에 연결하지 않는다.
 - API 1.2를 따른다. 판단/질문/provider dispatch는 요청당 최대3회다. hosted 내부 forward는 null/unavailable로 남긴다.
+- 위 Jev전용/API1.2는 현재 활성 경로다. 사용자 지정1.2.0 계획은 별도 `parser-api-v2`·Jev두패스/GPT rewrite/full_parse·전체8회 계약으로 이관한다. 계획만으로 활성화하지 않으며 기존 예산/epoch/멱등성 원장을 보존한다. 신규7일 trace는 기존 업무DB와 별도 저장한다.
 - 변경 후 해당 문서·설정 예시·시험 추적을 함께 갱신한다. LXC 증거가 없는 단계는 PLANNED/진행 중 상태로 유지한다.

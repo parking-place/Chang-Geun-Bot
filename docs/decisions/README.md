@@ -11,4 +11,5 @@
 - [0007 — 주시 채널 관리 명령](0007-watch-channel-management.md)
 - [0008 — Jev API 중계의 한 LXC 배치](0008-single-lxc-jev-api.md)
 - [0009 — 전체 명령의 자연어 입력과 관리자 응답 계획](0009-all-command-natural-language-plan.md)
+- [0010 — 1.2.0 Jev·LLM 재구성과 실제 목록 전달 계획](0010-reconstruction-parser-plan.md)
 - [새 기록 양식](TEMPLATE.md)
