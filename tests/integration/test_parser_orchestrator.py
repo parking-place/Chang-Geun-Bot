@@ -63,8 +63,8 @@ def environment(tmp_path, interpreter, model, *, fallback=False, llm=True):
 
 
 def full_success():
-    return {'status': 'parsed', 'plan': {'command': 'C25', 'arguments': {}},
-            'unresolved_arguments': [], 'question': None}
+    return {'decision': {'status': 'parsed', 'plan': {'command': 'C25', 'arguments': {}},
+                         'unresolved_arguments': [], 'question': None}}
 
 
 @pytest.mark.asyncio
@@ -207,7 +207,8 @@ async def test_unrelated_empty_collection_does_not_block_read_fallback(tmp_path)
     assert result.status == 'parsed' and result.draft.command_id == 'C25'
     assert model.state['unavailable_commands'] == {'C03': 'collection_empty'}
     assert set(model.state['allowed_commands']) == {'C25'}
-    command_enum = model.schema['properties']['plan']['anyOf'][0]['properties']['command']['enum']
+    command_enum = (model.schema['properties']['decision']['anyOf'][0]['properties']
+                   ['plan']['anyOf'][0]['properties']['command']['enum'])
     assert command_enum == ['C25']
     model.calls.clear()
     blocked = await parser._full_parse(view, actor, confirmed_command='C03', **attrs)
@@ -225,10 +226,10 @@ async def test_actual_registry_builds_bounded_full_parse_schema(tmp_path, roles,
                                     tmp_path / 'audio', {}))
     bot.db.ensure_guild('g')
     actor = Actor('g', 'u', roles, 'text', manage_guild=manage)
-    model = CapturingModel(full={
+    model = CapturingModel(full={'decision': {
         'status': 'needs_clarification', 'plan': None,
         'unresolved_arguments': [], 'question': '대상을 더 알려줘',
-    })
+    }})
     parser = ParserOrchestrator(Interpreter(None), model, bot.command_service,
                                 bot.db, policy, llm_enabled=True)
     view = InputNormalizer().normalize('!!창근아 목록 보여줘', invocation='!!창근아')

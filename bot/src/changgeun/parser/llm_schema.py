@@ -94,17 +94,32 @@ def full_parse_schema(
             },
             "required": ["command", "arguments"],
         })
-    return {
+    parsed = {
+        "type": "object", "additionalProperties": False,
+        "properties": {
+            "status": {"type": "string", "enum": ["parsed"]},
+            "plan": {"anyOf": branches},
+            "unresolved_arguments": {"type": "array", "items": {"type": "string"}},
+            "question": {"type": "null"},
+        },
+        "required": ["status", "plan", "unresolved_arguments", "question"],
+    }
+    unresolved = {
         "type": "object", "additionalProperties": False,
         "properties": {
             "status": {"type": "string", "enum": [
-                "parsed", "needs_clarification", "unsupported", "multiple_intents",
+                "needs_clarification", "unsupported", "multiple_intents",
             ]},
-            "plan": {"anyOf": [*branches, {"type": "null"}]},
+            "plan": {"type": "null"},
             "unresolved_arguments": {"type": "array", "items": {"type": "string"}},
             "question": {"type": ["string", "null"]},
         },
         "required": ["status", "plan", "unresolved_arguments", "question"],
+    }
+    return {
+        "type": "object", "additionalProperties": False,
+        "properties": {"decision": {"anyOf": [parsed, unresolved]}},
+        "required": ["decision"],
     }
 
 
@@ -133,6 +148,9 @@ def validate_rewrite_output(value: Any) -> dict[str, Any]:
 
 def validate_full_output(value: Any, *, commands: dict[str, CommandSpec],
                          collections: dict[tuple[str, str], CollectionSnapshot]) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != {"decision"}:
+        raise ParseError("invalid_full_parse_output")
+    value = value["decision"]
     if not isinstance(value, dict) or set(value) != {
         "status", "plan", "unresolved_arguments", "question"
     }:

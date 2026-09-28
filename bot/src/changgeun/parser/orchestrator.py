@@ -11,6 +11,7 @@ import httpx
 
 from changgeun.application.commands import CommandService
 from changgeun.domain.models import Actor, Policy
+from changgeun.nlp.command_registry import direct_candidates
 from changgeun.parser.collections import CollectionSnapshot, resolve_collection
 from changgeun.parser.contracts import (
     CommandDraft,
@@ -211,8 +212,13 @@ class ParserOrchestrator:
                    if key != "C39" and actor.guild_id in self.policy.guild_ids
                    and spec.allowed(actor, self.policy)}
         scope = "repair_arguments" if confirmed_command in allowed else "reparse"
+        hints = direct_candidates(view.normalized_text, allow_admin=actor.manage_guild)
+        hinted = {key: spec for key, spec in allowed.items() if key in hints}
         proposed = ({confirmed_command: allowed[confirmed_command]}
-                    if scope == "repair_arguments" and confirmed_command else allowed)
+                    if scope == "repair_arguments" and confirmed_command else
+                    hinted or allowed)
+        self._event(root_id, "command.retrieval", scope=scope,
+                    hint_ids=sorted(hinted), offered_count=len(proposed))
         selected: dict[str, CommandSpec] = {}
         collections: dict[tuple[str, str], CollectionSnapshot] = {}
         unavailable: dict[str, str] = {}

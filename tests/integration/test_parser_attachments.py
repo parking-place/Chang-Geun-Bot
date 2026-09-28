@@ -76,5 +76,5 @@ def test_optional_empty_attachment_list_is_null_without_model_choice(tmp_path):
     with pytest.raises(ParseError, match='optional_unmentioned'):
         _choice_set(arg, view, snapshot=selected)
     schema = full_parse_schema({'C09': spec}, collections={('C09', '파일'): selected})
-    branch = schema['properties']['plan']['anyOf'][0]
+    branch = schema['properties']['decision']['anyOf'][0]['properties']['plan']['anyOf'][0]
     assert branch['properties']['arguments']['properties']['파일'] == {'type': 'null'}

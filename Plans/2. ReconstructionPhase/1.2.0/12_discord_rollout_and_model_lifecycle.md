@@ -1,6 +1,6 @@
 # 12 — Discord 단계 적용과 모델 수명 관리
 
-- 상태: **IN_PROGRESS — p12j bot v2와 p12e gateway v2/LLM disabled를 테스트 서버에 적용. Discord API 확인 완료; 사용자 실제 인수·정식 출시는 미완료**
+- 상태: **IN_PROGRESS — p12l bot v2와 p12e gateway v2/LLM disabled를 테스트 서버에 적용. Discord API 확인 완료, 사용자 자연어 입력 인수 FAIL; 정식 출시는 미완료**
 - 책임: R120-31~33. 선행: [11 LXC 평가·이관](11_lxc_evaluation_and_migration.md)의 같은 후보 필수 게이트.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12.3·13·15.15·15.16.
 - 배포·검증 위치: DiscordBotLXC의 별도 bot/gateway 계정과 loopback TLS 경계 유지.
@@ -10,7 +10,7 @@
 
 계획 출발 기록은 활성 bot `patch117b`/gateway `patch116g`, 소스·wheel 후보 `patch118a` 미적용이다. p12d/e 실행에서 bot `patch117b`를 유지하고 gateway를 `recon120p12egw`까지 바꿨다. 공유 원장과 v1 계약을 보존했고 제한 Jev·GPT 실호출을 기록했다. GPT 키의 LXC 임시 사본을 제거하고 LLM disabled로 복구했다. 새 bot 적용 직전 현재 상태와 Git SHA·설치 wheel·설정 지문을 다시 잠근다.
 
-이 단계의 개발 후보 배포, 사용자 조작 인수, 버전 전체 완료, 정식 VERSION/태그는 각각 다른 판정이다. 계획 작성이나 키 파일 준비만으로 외부 API를 호출하거나 서비스를 교체하지 않는다. 구현 요청 이후에는 승인된 실행 범위에서 단계별 증거를 남긴다.
+이 단계의 개발 후보 배포, 사용자 조작 인수, 버전 전체 완료, 정식 VERSION/태그는 각각 다른 판정이다. p12l 테스트 서버 배포 후 사용자 자연어 입력5건이 모두 해석에 실패했다. 상세 증거와 Jev 진단은 [실행 기록](../../../evidence/public/reconstruction-120-progress.md)에 남긴다. 구현 요청 이후에는 승인된 실행 범위에서 단계별 증거를 남긴다.
 
 ## R120-31 — 단계 적용과 실제 Discord 인수
 
@@ -62,6 +62,8 @@ p12h에서는 `p12g` 후보가 시스템 Node20을 고정해 전환 사전검사
 p12i에서는 적용된 p12h 코드로 실행 없는 실제 Jev 읽기 요청3건을 보냈다가 낮은 확신도2건/비명령 판정1건을 확인했다. 검색 힌트로 명령 선택지를 좁히되 Jev의 선택과 검증을 유지하고, 조회 질문을 단일 요청으로 분류하도록 보완했다. 같은3건 재시험은 각 대상 명령 선택과 실행 전 검증을 통과했다. 새 bot wheel `recon120p12ibot`의 지정 LXC source/설치 wheel 각495회귀 후 테스트 서버에 전환했다. 실제 사용자 메시지 결과는 별도로 확인한다.
 
 p12j에서는 주시가 꺼진 상태의 관리자 복구 메시지가 v2 일반 명령 경로에 들어갈 수 있던 범위를 차단했다. 그 경로는 기존 관리자 전용 v1 선택기와 공통 실행기를 계속 사용하고, 주시 중 일반 자연어만 v2에 보낸다. 회귀에서 복구의 관리자 명령만 선택되고 일반 음악 명령은 v2로 전달되지 않음을 확인했다. 새 bot wheel `recon120p12jbot`을 지정 LXC source/설치 wheel 각496회귀 뒤 테스트 서버에 적용했다. 주시 꺼짐/복구의 실제 사용자 조작은 아직 별도 인수 대상이다.
+
+p12k 46명령 개발 선택 진단은37/46으로 목표보다 낮았다. p12l 제한 GPT 자동 복구 시험도 C22/C31을 확정하지 못했다. 한 GPT `full_parse` 응답이 질문 상태와 실행 계획을 함께 채워 검증에서 거부된 원인을 확인하고, 중첩 strict schema에서 두 상태를 분리했다. 명령 힌트가 분명할 때 full reparse의 실행 가능한 명령 분기도 그 범위로 한정해 무관한 계획을 막았다. 실제 GPT 단회 wire에서는 C31 강제 full_parse가 C31 초안을 반환했으나 자동 복구 품질을 입증하지는 못했다. 새 bot wheel `recon120p12lbot`을 LXC 회귀 뒤 적용했으며 gateway의 GPT 프로필은 시험 후 disabled로 복귀했다.
 
 | 상황 | 전환 정책과 필수 근거 |
 | --- | --- |

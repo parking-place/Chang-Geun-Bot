@@ -38,16 +38,24 @@ def test_full_contract_uses_only_real_opaque_member_ids():
     inventory, actual = commands(), collections()
     schema = full_parse_schema(inventory, collections=actual)
     token = actual[('C05', '목록')].selections[0].token
-    output = {'status': 'parsed', 'plan': {'command': 'C05',
-              'arguments': {'목록': {'candidate_id': token, 'query': None},
-                            '새이름': '퇴근 후'}},
-              'unresolved_arguments': [], 'question': None}
+    decision = {'status': 'parsed', 'plan': {'command': 'C05',
+                'arguments': {'목록': {'candidate_id': token, 'query': None},
+                              '새이름': '퇴근 후'}},
+                'unresolved_arguments': [], 'question': None}
+    output = {'decision': decision}
     assert validate_schema_value(output, schema)
-    assert validate_full_output(output, commands=inventory, collections=actual) == output
-    forged = {**output, 'plan': {**output['plan'], 'arguments': {
-        **output['plan']['arguments'], '목록': {'candidate_id': 'forged', 'query': None}}}}
+    assert validate_full_output(output, commands=inventory, collections=actual) == decision
+    forged = {'decision': {**decision, 'plan': {**decision['plan'], 'arguments': {
+        **decision['plan']['arguments'], '목록': {
+            'candidate_id': 'forged', 'query': None}}}}}
     assert not validate_schema_value(forged, schema)
     with pytest.raises(ParseError, match='foreign_selection'):
         validate_full_output(forged, commands=inventory, collections=actual)
+    contradictory = {'decision': {**decision, 'status': 'needs_clarification',
+                                   'unresolved_arguments': ['목록'],
+                                   'question': '무슨 목록?',}}
+    assert not validate_schema_value(contradictory, schema)
+    with pytest.raises(ParseError, match='invalid_full_parse_output'):
+        validate_full_output(contradictory, commands=inventory, collections=actual)
     with pytest.raises(ParseError, match='collection_required_for_llm'):
         full_parse_schema(inventory, collections={})
