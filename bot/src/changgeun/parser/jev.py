@@ -7,6 +7,7 @@ from typing import Any
 
 from changgeun.application.commands import CommandService
 from changgeun.domain.models import Actor, Policy
+from changgeun.nlp.command_registry import direct_candidates
 from changgeun.parser.collections import CollectionSnapshot, resolve_collection
 from changgeun.parser.contracts import CommandDraft, Evidence, ModelPort, ParseError, ParserOutcome
 from changgeun.parser.normalizer import NormalizedInput
@@ -121,15 +122,22 @@ class JevInterpreter:
                  "normalized_message": view.normalized_text,
                  "pass_id": pass_id, "message_variant": (
                      "rewritten" if rewritten_text else "normalized")}
-        command_options = {key: f"{spec.name}: {spec.description}" for key, spec in allowed.items()}
+        hints = direct_candidates(rewritten_text or view.normalized_text,
+                                  allow_admin=actor.manage_guild)
+        hinted = {key: spec for key, spec in allowed.items() if key in hints}
+        offered = hinted or allowed
+        command_options = {key: f"{spec.name}: {spec.description}" for key, spec in offered.items()}
         command_options["__NONE__"] = "해당하는 허용된 단일 명령 없음"
         kind_options = {
-            "single": "등록 명령 하나를 실제 요청", "multiple": "서로 다른 작업 둘 이상",
-            "not_request": "잡담/인용/설명", "unclear": "불명확",
+            "single": "등록 명령 하나의 실행 또는 조회를 부탁하거나 질문",
+            "multiple": "서로 다른 작업 둘 이상을 요청",
+            "not_request": "실행이나 조회 요청 없는 잡담/인용/설명",
+            "unclear": "요청 여부나 대상이 불명확",
         }
         questions = {
             "input_kind": {"type": "choice", "instructions":
-                           "message는 실제 실행 요청인가? 원문의 부정과 언급만 한 작업을 구분한다."
+                           "message가 실행 또는 정보 조회를 부탁하거나 질문하면 single이다. "
+                           "원문의 부정과 언급만 한 작업을 구분한다. "
                            "여러 곡을 한 목록에 넣기는 하나의 작업이다.", "criteria": kind_options},
             "command": {"type": "choice", "instructions":
                         "message에서 실제 요청한 단일 명령을 고른다. 부정된 작업은 고르지 않는다."

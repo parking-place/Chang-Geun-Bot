@@ -124,3 +124,28 @@ async def test_after_rewrite_reselects_command_instead_of_reusing_first(tmp_path
         rewritten_text='운동 재생목록 두 번째 곡 제거')
     assert result.status == 'parsed' and result.draft.command_id == 'C12'
     assert all(item[1] == 'after_rewrite' for item in model.calls)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('utterance,identifier', [
+    ('저장된 재생목록을 보여줘', 'C01'),
+    ('지금 대기열에 뭐가 있어?', 'C16'),
+    ('사용법을 알려줘', 'C38'),
+])
+async def test_read_request_hints_still_require_jev_selection(tmp_path, utterance, identifier):
+    db = Database(tmp_path / 'catalog.sqlite')
+    db.ensure_guild('g')
+    specs = {key: CommandSpec(key, key, key, (), 'public', 'read')
+             for key in ('C01', 'C16', 'C38')}
+    async def noop(_entry, _args):
+        raise AssertionError('parser must not execute')
+    service = CommandService(specs, {key: noop for key in specs})
+    model = Model(command=identifier)
+    actor = Actor('g', 'u', frozenset(), 'text')
+    policy = Policy(frozenset({'g'}), frozenset(), frozenset(), frozenset())
+    view = InputNormalizer().normalize(utterance)
+    result = await JevInterpreter(service, model, db, policy).interpret(
+        view, actor, root_id='r', pass_id='initial', scope_hash='scope')
+    assert result.status == 'parsed' and result.draft.command_id == identifier
+    assert set(model.calls[0][3]['command']['criteria']) == {identifier, '__NONE__'}
+    assert len(model.calls) == 1
