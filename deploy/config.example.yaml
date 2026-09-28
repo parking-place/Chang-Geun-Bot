@@ -14,6 +14,8 @@ commands:
   # 1.2 development candidate: keep v1 until independent evaluation and Discord acceptance.
   natural_parser_version: v1
   parser_llm_fallback: disabled
+  # Set a private absolute local SQLite path before explicitly enabling v2.
+  # parser_trace_path: /var/lib/changgeun-dev/parser-trace/command-traces-v2.sqlite3
   # 1.0.3: prefix.enabled is a deployment capability; channel list seeds DB once.
   # Dynamic watch commands do not expand the ordinary slash/mention channel policy.
   prefix:

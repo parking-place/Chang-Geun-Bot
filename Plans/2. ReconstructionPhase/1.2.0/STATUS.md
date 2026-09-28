@@ -20,9 +20,9 @@
 | 07 | [LLM 프로필](07_llm_provider_profiles.md) | IN_PROGRESS | [p7 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock13 PASS | 실호출/실비·계정경계·전체계약 |
 | 08 | [복구 전이](08_rewrite_and_fallback_orchestration.md) | IN_PROGRESS | [p8 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC14 PASS | 실제통합 전이·후보/의미 검증 |
 | 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | IN_PROGRESS | [p9·p12a/b 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 읽기·한 인수 typed·단회확인 대역PASS | 다중/의존인수·전체명령/후속·실제권한/확인 미완료 |
-| 10 | [로그·보관](10_structured_logs_and_retention.md) | IN_PROGRESS | [p10 실행](../../../evidence/public/reconstruction-120-progress.md) / 격리 LXC4 PASS | 활성 연결·정리 worker·이관/보관사본·관리자 조회 미완료 |
+| 10 | [로그·보관](10_structured_logs_and_retention.md) | IN_PROGRESS | [p10·p12c 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 opt-in 최소관측 대역PASS | bounded writer·이관/보관사본·관리자 조회 미완료 |
 | 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | IN_PROGRESS | [p11 실행](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각476 PASS | 독립221·실호출비용·격리이관/복귀 NOT_RUN |
-| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12·p12a/b 준비](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각483 PASS | p11 게이트·전수·실제 Discord 인수·전환 NOT_RUN |
+| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12·p12a/b/c 준비](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각485 PASS | p11 게이트·전수·실제 Discord 인수·전환 NOT_RUN |
 
 ## 보존할 기준선과 이전 미완료
 

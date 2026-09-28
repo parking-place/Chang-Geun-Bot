@@ -47,6 +47,8 @@ p12a 후속 개발 후보에서는 bot 설정 `natural_parser_version: v2`를 �
 
 p12b 후보는 한 인수 누락의 60초 모달을 연결하고, 봇 시작 때 gateway의 `parser_v2_ready`와 LLM 프로필이 명시 설정과 일치하는지 확인한다. 프로필이 다르면 시작을 거부한다. 이는 LXC 대역 시험 결과이며 실제 활성 gateway에는 v2 옵션을 적용하지 않았다.
 
+p12c 후보는 v2 opt-in 설정에 독립 trace 경로를 필수로 묶고 최소 관측을 연결했다. 활성 봇/gateway 설정은 그대로이며 신규 trace의 실제 운영 보관·관리자 접근·이관 검증은 아직 수행하지 않았다.
+
 | 상황 | 전환 정책과 필수 근거 |
 | --- | --- |
 | 초기 nano 활성화 | rewrite/full_parse 각각의 실제 API·스키마·한국어·거절/timeout·usage 계약을 제한 예산에서 검증 |

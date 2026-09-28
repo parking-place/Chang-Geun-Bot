@@ -99,12 +99,14 @@ class _TypedModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         context = self.context
+        consumed = False
         try:
             action = self.bridge.pending.consume(
                 self.token, kind="typed", root_id=context.root_id,
                 guild_id=str(interaction.guild_id), channel_id=str(interaction.channel_id),
                 actor_id=str(interaction.user.id),
             )
+            consumed = True
             spec = self.bridge.client.command_service.specs[action.command_id]
             draft, trusted = answer_typed(
                 action, str(self.answer.value), spec,
@@ -128,7 +130,13 @@ class _TypedModal(discord.ui.Modal):
             )
             await interaction.followup.send("답변을 반영했어.", ephemeral=True)
         except (ParseError, DomainError, discord.HTTPException):
-            message = "답변이나 요청 상태가 맞지 않아 실행하지 않았어. 새로 요청해줘."
+            trace = getattr(self.bridge.client, "parser_trace", None)
+            if trace is not None and consumed:
+                trace.outcome(context.root_id, parse_status="clarify",
+                              execution_status="outcome_unknown")
+            message = ("처리 결과를 확인하지 못했어. 현재 상태를 조회해줘."
+                       if consumed else
+                       "답변이나 요청 상태가 맞지 않아 실행하지 않았어. 새로 요청해줘.")
             if interaction.response.is_done():
                 await interaction.followup.send(message, ephemeral=True)
             else:
@@ -183,14 +191,26 @@ class _ConfirmView(discord.ui.View):
                 member=await action.guild.fetch_member(interaction.user.id),
                 contexts=action.contexts,
             )
+            trace = getattr(self.bridge.client, "parser_trace", None)
+            if trace is not None:
+                trace.outcome(action.root_id, parse_status="parsed",
+                              execution_status="outcome_unknown",
+                              resolved_command=action.validated.draft.command_id,
+                              executed_command=action.validated.draft.command_id)
             await interaction.followup.send("확인한 명령을 처리했어.", ephemeral=True)
         except (ParseError, DomainError, discord.HTTPException):
+            trace = getattr(self.bridge.client, "parser_trace", None)
+            if trace is not None and consumed:
+                trace.outcome(action.root_id, parse_status="parsed",
+                              execution_status="outcome_unknown",
+                              resolved_command=action.validated.draft.command_id)
+            message = ("처리 결과를 확인하지 못했어. 현재 상태를 조회해줘."
+                       if consumed else
+                       "요청이나 대상 상태가 달라져 실행하지 않았어. 새로 요청해줘.")
             if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    "요청이나 대상 상태가 달라져 실행하지 않았어. 새로 요청해줘.", ephemeral=True)
+                await interaction.response.send_message(message, ephemeral=True)
             else:
-                await interaction.followup.send(
-                    "요청이나 대상 상태가 달라져 실행하지 않았어. 새로 요청해줘.", ephemeral=True)
+                await interaction.followup.send(message, ephemeral=True)
         finally:
             if consumed:
                 self.stop()
@@ -219,18 +239,23 @@ class ParserV2Bridge:
         client = self.client
         if client.gateway is None:
             raise ParseError("gateway_not_configured")
+        trace = getattr(client, "parser_trace", None)
+        if trace is not None:
+            trace.begin(request_id, actor.guild_id, actor.user_id,
+                        actor.text_channel_id, text)
         await client.gateway.ready()
-        view = InputNormalizer().normalize(text)
+        view = InputNormalizer().normalize(text, request_id=request_id, trace=trace)
         scope_hash = hashlib.sha256(
             f"{actor.guild_id}:{actor.text_channel_id}:{actor.user_id}".encode()
         ).hexdigest()
         session = ParserSession(client.gateway, request_id=request_id,
-                                scope_hash=scope_hash, original_text=text)
+                                scope_hash=scope_hash, original_text=text, trace=trace)
         interpreter = JevInterpreter(client.command_service, session, client.db,
                                      client.config.policy)
         orchestrator = ParserOrchestrator(
             interpreter, session, client.command_service, client.db, client.config.policy,
             llm_enabled=client.config.parser_llm_fallback == "gpt-5-nano",
+            trace=trace,
         )
         guild = source.guild
         if guild is None:
@@ -270,6 +295,10 @@ class ParserV2Bridge:
                 command_id=partial.command_id,
                 argument=missing, payload=TypedQuestion(partial, snapshot),
             )
+            if trace is not None:
+                trace.outcome(request_id, parse_status="clarify",
+                              execution_status="waiting_typed",
+                              resolved_command=partial.command_id)
             await source.followup.send(
                 f"{discord.utils.escape_markdown(spec.name)} 명령의 "
                 f"{discord.utils.escape_markdown(missing)} 값을 입력해줘.",
@@ -278,6 +307,8 @@ class ParserV2Bridge:
             )
             return
         if outcome.status != "parsed" or outcome.draft is None:
+            if trace is not None:
+                trace.outcome(request_id, parse_status=outcome.status)
             await source.followup.send(
                 "대상이나 값을 확정하지 못했어. 더 구체적으로 말하거나 슬래시 명령을 사용해줘.",
                 ephemeral=True,
@@ -312,6 +343,7 @@ class ParserV2Bridge:
         contexts: dict[str, TrustedContext] | None = None,
     ) -> None:
         spec = self.client.command_service.specs[checked.draft.command_id]
+        trace = getattr(self.client, "parser_trace", None)
         if checked.requires_confirmation:
             action = _Confirmation(checked, source, entry, view, request_id, pass_id,
                                    scope_hash, validator, guild, contexts)
@@ -321,6 +353,10 @@ class ParserV2Bridge:
                 command_id=checked.draft.command_id, payload=action,
             )
             preview = f"{discord.utils.escape_markdown(spec.name)} 명령을 실행할까?"
+            if trace is not None:
+                trace.outcome(request_id, parse_status="parsed",
+                              execution_status="waiting_confirmation",
+                              resolved_command=checked.draft.command_id)
             await source.followup.send(preview, view=_ConfirmView(self, token, action),
                                        ephemeral=True)
             return
@@ -331,3 +367,8 @@ class ParserV2Bridge:
             guild=guild, member=await guild.fetch_member(source.user.id),
             contexts=contexts,
         )
+        if trace is not None:
+            trace.outcome(request_id, parse_status="parsed",
+                          execution_status="outcome_unknown",
+                          resolved_command=checked.draft.command_id,
+                          executed_command=checked.draft.command_id)

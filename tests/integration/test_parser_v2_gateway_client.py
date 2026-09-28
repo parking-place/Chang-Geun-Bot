@@ -5,6 +5,7 @@ import pytest
 
 from changgeun.parser.contracts import ParseError
 from changgeun.parser.gateway import ParserSession
+from changgeun.parser.trace import SafeTraceRecorder, TraceStore
 
 
 class FakeGateway:
@@ -71,3 +72,30 @@ async def test_response_binding_mismatch_is_rejected():
                                pass_id='initial', stage_index=1, questions={})
     finally:
         await gateway.client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_v2_observer_records_one_call_and_failure_usage(tmp_path):
+    def route(request):
+        body = json.loads(request.content)
+        return httpx.Response(200, json={
+            'schema_version': 'parser-api-v2', 'request_id': body['root']['request_id'],
+            'call_id': body['call_id'], 'operation': body['operation'],
+            'attempt_no': 1, 'remote_attempted': True, 'status': 'refused',
+            'result': None, 'usage': {'input_tokens': 8, 'output_tokens': 2},
+        })
+    gateway = FakeGateway(httpx.MockTransport(route))
+    trace = SafeTraceRecorder(TraceStore(tmp_path / 'private' / 'v2.sqlite3'))
+    trace.begin('root', 'guild', 'actor', 'channel', 'synthetic request')
+    try:
+        session = ParserSession(gateway, request_id='root', scope_hash='a' * 64,
+                                original_text='synthetic request', trace=trace)
+        with pytest.raises(ParseError, match='gateway_provider_failed'):
+            await session.call('command_select', {'message': 'synthetic request'},
+                               pass_id='initial', stage_index=1, questions={})
+    finally:
+        await gateway.client.aclose()
+    rows = trace.store.calls('root')
+    assert len(rows) == 1
+    assert rows[0]['status'] == 'refused'
+    assert trace.store.usage_summary('guild')['known_input_tokens'] == 8

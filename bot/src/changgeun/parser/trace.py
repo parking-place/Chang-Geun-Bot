@@ -64,6 +64,8 @@ class TraceStore:
         self.path = path
         if not path.is_absolute():
             raise ValueError("trace path must be absolute")
+        if path.is_symlink() or path.parent.is_symlink():
+            raise ValueError("trace symlink forbidden")
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         if path.parent.stat().st_mode & 0o077:
             raise ValueError("trace directory must be private")
@@ -239,3 +241,42 @@ class TraceStore:
         conn.executemany("DELETE FROM command_requests WHERE request_id=?",
                          [(item,) for item in ids])
         return len(ids)
+
+
+class SafeTraceRecorder:
+    """Best-effort observations; a logging failure never repeats a model or command."""
+
+    def __init__(self, store: TraceStore) -> None:
+        self.store = store
+        self.failed_writes = 0
+        self.last_success_ms: int | None = None
+
+    def _write(self, method: str, *args: Any, **kwargs: Any) -> Any:
+        try:
+            result = getattr(self.store, method)(*args, **kwargs)
+            self.last_success_ms = int(time.time() * 1000)
+            return result
+        except (OSError, sqlite3.Error, ParseError, ValueError):
+            self.failed_writes += 1
+            return None
+
+    def begin(self, request_id: str, guild_id: str, actor_id: str,
+              channel_id: str, text: str) -> None:
+        self._write("begin", request_id, guild_id, actor_id, channel_id, text)
+
+    def event(self, request_id: str, name: str, data: dict[str, Any]) -> None:
+        self._write("event", request_id, name, data)
+
+    def call(self, request_id: str, call_id: str, attempt_no: int,
+             operation: str, pass_id: str | None, stage_index: int | None,
+             *, remote_attempted: bool, status: str,
+             usage: dict[str, Any] | None = None) -> None:
+        self._write("call", request_id, call_id, attempt_no, operation,
+                    pass_id, stage_index, remote_attempted=remote_attempted,
+                    status=status, usage=usage)
+
+    def outcome(self, request_id: str, **values: Any) -> None:
+        self._write("outcome", request_id, **values)
+
+    def purge(self) -> int:
+        return int(self._write("purge") or 0)

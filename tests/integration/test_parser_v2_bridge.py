@@ -14,7 +14,7 @@ from changgeun.storage.database import Database
 
 
 class FakeSession:
-    def __init__(self, gateway, *, request_id, scope_hash, original_text):
+    def __init__(self, gateway, *, request_id, scope_hash, original_text, trace=None):
         self.root = {'expires_at': time.time() + 35}
         self.calls = 0
 

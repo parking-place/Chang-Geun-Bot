@@ -98,3 +98,9 @@
 - 봇의 v2 opt-in 시작은 gateway 인증 health의 v2 readiness와 `disabled`/`gpt-5-nano` 프로필 일치 확인에 묶었다. v1 서비스에는 새 검사를 적용하지 않는다. 키 없는 disabled/프로필 불일치 시험을 LXC 대역에서 수행했다. 실제 활성 프로필·서비스는 변경하지 않았다.
 - 지정 DiscordBotLXC의 같은 공개 소스 manifest SHA256 `58e43be574967f0f7eb5b56ea389208da1ec2466d31e48af2f29b822d22708a5`에서 source·새 격리 설치 wheel 각각 **483 PASS**, 전체 Ruff PASS·mypy65파일 PASS. wheel import가 격리 `site`를 가리켰다. bot wheel SHA256 `89e9e474a445e344d988f012499d6d65176f546d6e549c408234008c42b6fe1e`, gateway wheel SHA256 `a3a0af4563548ce2a0864e93e43d1e67aa33ca4beb20d993c7c45ad95313896b`.
 - **NOT_RUN:** 다중/의존 인수 typed 해소·실제 목록 동명 선택 UI, 전체47명령/8후속 parity, 실제 Jev/GPT 실호출 및 비용(누적0/US$1 상한), 독립221·trace 운영/이관·실제 Discord 청취/조작·활성 전환/복귀. p12b는 개발 후보이며 버전 완료/출시가 아니다.
+
+## p12c — opt-in trace 관측 연결 체크포인트
+
+- v2 봇은 private 절대 경로의 독립 SQLite trace 파일을 명시해야 시작한다. symlink와 공개 디렉터리는 거부한다. 자연어 입장 후 원문은 제한적 마스킹 사본으로 저장하고 정규화·stage 생략·호출별 usage·parser/확인 대기·서비스 전달 상태를 기록한다. gateway 실패 응답의 usage도 호출 ID에 한 번 보존하고 trace 쓰기 실패는 카운트하되 모델/명령을 다시 실행하지 않는다. 시작 시 만료 정리와 주기적 배치 정리를 추가했다.
+- 지정 DiscordBotLXC의 동일 소스 manifest SHA256 `f905ad6a60efb2f3ce0aa952e61144f3c166001737761c39abc7a6e0a1a917a4`에서 source·새 격리 설치 wheel 각각 **485 PASS**, 전체 Ruff PASS·mypy65파일 PASS. wheel import는 격리 `site`를 가리켰다. bot wheel SHA256 `3d1d992b7f257be3df6898949c3222f7c03b23b3f366a6235e802a32b0fc1b17`, gateway wheel SHA256 `2f7958626353ee5bc122c393e0e166590c5ef54bd3675ba150c98df4a1ad91e7`.
+- **NOT_RUN:** bounded 비동기 writer·모든 실패 최종 상태·관리자 조회/export·trace v1 이관/복귀·사본의 실제 만료, 전체47명령/8후속 parity, 독립221·실제 Jev/GPT 호출/US$1 비용·실제 Discord 인수/전환. 로그 단위시험으로 운영 보관 게이트를 PASS로 표시하지 않는다. 활성서비스·GPT 실호출/지출0 유지.

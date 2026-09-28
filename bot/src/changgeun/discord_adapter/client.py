@@ -53,6 +53,7 @@ from changgeun.nlp.client import GatewayClient
 from changgeun.nlp.command_registry import CommandSelector, structured_alias
 from changgeun.nlp.pipeline import Pipeline
 from changgeun.parser.contracts import ParseError
+from changgeun.parser.trace import SafeTraceRecorder, TraceStore
 from changgeun.providers.media import YouTubeMetadata
 from changgeun.providers.youtube import YouTubeData
 from changgeun.providers.youtube_audio import MediaResolver
@@ -702,9 +703,13 @@ class ChangGeunClient(discord.Client):
 
         self.command_service = build_service(self.tree)
         self.parser_v2 = None
+        self.parser_trace: SafeTraceRecorder | None = None
         if config.natural_parser_version == "v2":
             from changgeun.discord_adapter.parser_v2 import ParserV2Bridge
 
+            if config.parser_trace_path is None:
+                raise ValueError("parser v2 trace path required")
+            self.parser_trace = SafeTraceRecorder(TraceStore(config.parser_trace_path))
             self.parser_v2 = ParserV2Bridge(self)
 
     async def setup_hook(self) -> None:
@@ -745,8 +750,12 @@ class ChangGeunClient(discord.Client):
 
     async def _timers(self) -> None:
         await self.wait_until_ready()
+        next_trace_purge = time.monotonic() + 3600
         while not self.is_closed():
             await self.audio.check_auto_leave(self.config.policy.guild_ids)
+            if self.parser_trace is not None and time.monotonic() >= next_trace_purge:
+                removed = self.parser_trace.purge()
+                next_trace_purge = time.monotonic() + (5 if removed >= 500 else 3600)
             await asyncio.sleep(5)
 
     async def notify(self, guild: str, message: str) -> None:

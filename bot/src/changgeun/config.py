@@ -26,6 +26,7 @@ class BotConfig:
     youtube_js_runtime: Path = Path("/usr/bin/node")
     natural_parser_version: str = "v1"
     parser_llm_fallback: str = "disabled"
+    parser_trace_path: Path | None = None
 
     @classmethod
     def read(cls, path: Path) -> BotConfig:
@@ -93,6 +94,12 @@ class BotConfig:
             raise ValueError("invalid natural parser configuration")
         if parser_version == "v1" and llm_fallback != "disabled":
             raise ValueError("LLM fallback requires parser v2")
+        trace_raw = raw["commands"].get("parser_trace_path")
+        trace_path = Path(trace_raw) if isinstance(trace_raw, str) and trace_raw else None
+        if (parser_version == "v2" and (trace_path is None or not trace_path.is_absolute())):
+            raise ValueError("parser v2 requires an absolute trace path")
+        if parser_version == "v1" and trace_path is not None:
+            raise ValueError("parser trace path requires parser v2")
         return cls(
             database,
             policy,
@@ -105,4 +112,5 @@ class BotConfig:
             Path(media.get("youtube_js_runtime", "/usr/bin/node")),
             parser_version,
             llm_fallback,
+            trace_path,
         )

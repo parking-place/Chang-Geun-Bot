@@ -27,6 +27,12 @@ storage:
     with pytest.raises(ValueError, match='natural parser'):
         BotConfig.read(path)
     path.write_text(path.read_text() + 'active_inference:\n  provider: jev-api\n')
+    with pytest.raises(ValueError, match='trace path'):
+        BotConfig.read(path)
+    path.write_text(path.read_text().replace(
+        '  parser_llm_fallback: disabled',
+        f'  parser_llm_fallback: disabled\n  parser_trace_path: {tmp_path / "trace" / "v2.db"}',
+    ))
     assert BotConfig.read(path).natural_parser_version == 'v2'
     write('unknown', 'disabled')
     with pytest.raises(ValueError, match='natural parser'):

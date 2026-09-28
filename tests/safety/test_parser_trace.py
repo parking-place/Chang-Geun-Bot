@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from changgeun.parser.contracts import ParseError
-from changgeun.parser.trace import TTL_MS, TraceStore, sanitize
+from changgeun.parser.trace import TTL_MS, SafeTraceRecorder, TraceStore, sanitize
 
 
 def test_expiry_exact_boundary_and_cascade(tmp_path):
@@ -82,3 +82,16 @@ def test_unknown_schema_requires_migration_and_private_directory(tmp_path):
     public.mkdir(mode=0o755)
     with pytest.raises(ValueError, match='private'):
         TraceStore(public / 'trace.sqlite3')
+    link = tmp_path / 'trace-link.sqlite3'
+    link.symlink_to(path)
+    with pytest.raises(ValueError, match='symlink'):
+        TraceStore(link)
+
+
+def test_observer_write_failure_does_not_retry_operation(tmp_path):
+    store = TraceStore(tmp_path / 'private' / 'trace.sqlite3')
+    recorder = SafeTraceRecorder(store)
+    recorder.begin('r', 'g', 'u', 'c', 'text')
+    recorder.begin('r', 'g', 'u', 'c', 'text')
+    assert recorder.failed_writes == 1
+    assert store.get('r') is not None
