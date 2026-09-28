@@ -26,3 +26,10 @@
 - 2026-09-28 사용자 재개 지시 후 p1/p2 작업 트리와 지정 DiscordBotLXC readiness를 재확인했다. 제품 API 실호출 없이 health 점검만 수행했다.
 - `InputNormalizer`는 확인된 시작 접두사만 제거하고 원문을 별도 보관한다. 정확한 기존 이름, 따옴표/닫히지 않은 인용, URL, Discord 멘션을 보호한다. 나머지 공백과 NFC에만 보수적 변환을 적용하며 각 해석 문자에 원문 code point 구간을 붙인다. 원문 인용 검증은 실패 시 닫힌다. `code.normalize` 이벤트에는 원문 없이 규칙/시간/보호 수만 보낸다.
 - 지정 LXC의 source에서 한글·복수 공백·scheme 없는 YouTube URL·멘션·조합형 한글·이모지·반복값·500회 무작위 Unicode 범위 시험 등 신규10 PASS, mypy PASS. 실제 Discord 연결과 원문값의 의미 검증은 p4/p9에서 계속한다. 모델 호출0.
+
+## p4 — 실제 목록 스냅샷과 새 값의 원문 근거
+
+- 지정 DiscordBotLXC 격리 DB에서 서버별 재생목록·곡·목록entry·대기열·제안·변경 목록을 조회한다. Discord 채널은 현재 guild/member 권한과 음성채널 정책으로 거른다. 선택 토큰은 내부 ID를 노출하지 않고 root/pass/argument/scope/revision에 묶는다. 동일 곡의 서로 다른 entry와 실제 번호를 별도로 보존한다.
+- 전체 목록을 포함할 수 없으면 `collection_overflow`로 종료한다. 실제 252항목+예약3개=255 경계, 253항목 거부, byte 한도, 빈 목록, 타 서버/타 패스 토큰·권한거부·revision 변경을 격리 시험했다. 기존 값을 문장 구간 유사도 top-k로 추려 보내지 않는다.
+- 신규값은 인용·URL·멘션·숫자·연속 텍스트 구간에서 원문 위치와 함께 만든다. 값 추출과 실제 목록 선택은 다른 경로다. 모델/Jev 호출0, 신규 LXC 시험6 PASS, 신규 모듈 mypy/Ruff PASS.
+- 제한: 등록부가 선언한 `attachments`와 일부 command별 정책 범위, 실제 Discord 명령 연결 및 실행 직전 객체·권한 재확인은 아직 끝나지 않았다. 스냅샷/값 모듈 통과를 전체 p4 또는 제품 PASS로 표시하지 않는다.
