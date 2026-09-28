@@ -1,6 +1,6 @@
 # 1.2.0 시험 추적과 판정
 
-전체 게이트: **IN_PROGRESS**. p1~p12h의 일부 계약/격리 회귀, 제한 Jev/GPT 실호출, 테스트 서버 봇 적용은 [실행 기록](../../../evidence/public/reconstruction-120-progress.md)에 남겼다. Discord API 인증·명령 등록 확인은 실제 사용자 명령/청취 인수가 아니다. 이 표의 종료 기준 전건, 독립221·Discord 사용자 인수·이관은 미완료다. 코드·모델·DB를 실행하는 모든 시험은 **DiscordBotLXC 전용**이다. 로컬 문서 링크/비밀 패턴 점검 결과는 제품 PASS로 기록하지 않는다.
+전체 게이트: **IN_PROGRESS**. p1~p12j의 일부 계약/격리 회귀, 제한 Jev/GPT 실호출, 테스트 서버 봇 적용은 [실행 기록](../../../evidence/public/reconstruction-120-progress.md)에 남겼다. Discord API 인증·명령 등록 확인은 실제 사용자 명령/청취 인수가 아니다. 이 표의 종료 기준 전건, 독립221·Discord 사용자 인수·이관은 미완료다. 코드·모델·DB를 실행하는 모든 시험은 **DiscordBotLXC 전용**이다. 로컬 문서 링크/비밀 패턴 점검 결과는 제품 PASS로 기록하지 않는다.
 
 ## 시험 목록
 

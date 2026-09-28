@@ -2246,7 +2246,9 @@ class ChangGeunClient(discord.Client):
                     )
             else:
                 request = interaction.request_id
-            if self.parser_v2 is not None:
+            # Recovery while watching is disabled has a deliberately admin-only
+            # v1 command set. Do not widen it through the general v2 parser.
+            if self.parser_v2 is not None and not admin_only:
                 await self.parser_v2.parse(interaction, text, actor, request)
                 return
             async def recheck() -> None:

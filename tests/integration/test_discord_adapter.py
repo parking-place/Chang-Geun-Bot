@@ -78,6 +78,32 @@ def client(tmp_path):
     return bot
 
 
+@pytest.mark.asyncio
+async def test_v2_keeps_disabled_watch_recovery_admin_only(client, monkeypatch):
+    parsed, dispatched = [], []
+
+    async def parse(*args):
+        parsed.append(args)
+
+    async def dispatch(_client, _entry, _actor, choice, _text):
+        dispatched.append(choice.command.identifier)
+
+    async def fresh(entry):
+        return Actor("1", str(entry.user.id), frozenset({"2"}), "3", "4", "4",
+                     manage_guild=True)
+
+    client.parser_v2 = SimpleNamespace(parse=parse)
+    client.fresh_actor = fresh
+    monkeypatch.setattr("changgeun.discord_adapter.client.dispatch_natural", dispatch)
+    await client.natural_input(interaction(identifier=110), "주시 목록",
+                               admin_only=True, quiet=True)
+    await client.natural_input(interaction(identifier=111), "현재곡",
+                               admin_only=True, quiet=True)
+    assert parsed == [] and dispatched == ["C42"]
+    await client.natural_input(interaction(identifier=112), "목록 보여줘")
+    assert len(parsed) == 1 and dispatched == ["C42"]
+
+
 def test_role_and_channel_help_does_not_expose_management_or_other_channels(client):
     policy = client.config.policy
     guest = Actor("1", "10", frozenset(), "3", None, None)
