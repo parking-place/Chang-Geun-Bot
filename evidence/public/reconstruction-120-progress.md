@@ -46,3 +46,10 @@
 - [TypeSafe 공식 API](https://docs.typesafe.ai/api)와 [Primitives](https://docs.typesafe.ai/primitives)의 현재 문서를 확인해 동일 HTTP 요청의 named 질문·Choice `choice/probabilities/confidence`·Noul `noul`·usage 형태를 검증했다. 신규 `HostedParserProvider`는 Jev 질문만 전송하고 질문 키/선택지/분포/타입 불일치를 거부한다. 외부 API 실호출은 아직 하지 않았다.
 - `JevInterpreter`는 두 패스에서 같은 코드로 입력 성격+허용 명령 전체를 묶고, 실제 목록/원문값의 인수 질문을 한 번에 묶는다. 목록 선택 후 entry가 새로 생길 때만3차를 사용한다. 재해석 패스에서 명령을 다시 고르고, 복합/비명령은 실행 초안으로 만들지 않는다. `ParserSession`은 기존 내부TLS 자격정보를 재사용해 parser-api-v2 root/응답 결합과 취소를 수행한다.
 - 지정LXC 고정 DB/HTTP mock의 신규8시험 PASS, 신규 모듈 Ruff/mypy PASS. 후보 선택 뒤 실제 실행 검증은p9, 목록형 Noul 복수선택·전체47명령/옵션 정확도·실제Jev 성능과 품질은 미완료다. GPT 실호출0, Jev 실호출0.
+
+## p7 — GPT-5 nano 교체 프로필과 구조화 출력
+
+- [OpenAI 공식 GPT-5 nano 모델 문서](https://developers.openai.com/api/docs/models/gpt-5-nano)의 2026-09-28 조회값인 입력 $0.05/100만 토큰·출력 $0.40/100만 토큰, Responses·Structured Outputs 지원을 확인했다. [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)와 [Responses 이관 문서](https://developers.openai.com/api/docs/guides/migrate-to-responses)의 `text.format` strict JSON Schema·`store=false` 계약을 사용한다. 가격 버전은 코드에 고정하며 실제 검증 전 재확인한다.
+- `disabled`/`gpt-5-nano`/미구현 프로필을 명시 구분한다. bot의 등록부에서 rewrite와 full_parse 엄격 스키마를 만들고 실제 목록 opaque ID만 후보로 넣는다. gateway REST 어댑터는 도구 없이 고정 Responses endpoint에 단회 전송하며 사용량을 먼저 수집하고 거절·미완료·스키마 오류를 실행 불가 상태로 기록한다. gateway v2 원장은 예약금액과 확인된 실비를 분리하고 사용량 불명은 0원으로 바꾸지 않는다.
+- 사용자 지정 US$1은 모든 요청/재시작에 걸친 **누적 예약 상한**이다. 최대 입력 byte와 출력 토큰, 캐시 할인 없는 표준 단가·입력 byte당 2토큰 보수적 계산으로 송신 전 최악 금액을 예약한다. 이 검증에는 HTTP mock만 사용했고 GPT 실호출0·실제지출0, gateway 활성값도 불변이다.
+- 지정 LXC의 신규 스키마2·어댑터/프로필3·기존 v2 예산/서비스8 = 관련13 PASS, 새 파일 Ruff/mypy PASS. 실제 키 접근·모델 권한·정식 비용 정산/장애 분기·47명령 전수 스키마·p10 trace 연계는 남았다. 사용자가 지정한 `.private` GPT 정보 파일 권한은 비밀값을 읽거나 출력하지 않고 0600으로 제한했다.

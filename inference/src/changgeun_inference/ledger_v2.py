@@ -37,11 +37,15 @@ class ParserLedger:
                  attempt_no INTEGER NOT NULL,status TEXT NOT NULL,
                  remote_attempted INTEGER NOT NULL DEFAULT 0,
                  response TEXT,cost_reserved_micro_usd INTEGER NOT NULL DEFAULT 0,
+                 cost_actual_micro_usd INTEGER,
                  PRIMARY KEY(request_id,call_id));
                 CREATE TABLE IF NOT EXISTS v2_spend(
                  budget_key TEXT PRIMARY KEY,reserved_micro_usd INTEGER NOT NULL DEFAULT 0,
                  actual_micro_usd INTEGER NOT NULL DEFAULT 0);
             """)
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(v2_calls)")}
+            if "cost_actual_micro_usd" not in columns:
+                conn.execute("ALTER TABLE v2_calls ADD COLUMN cost_actual_micro_usd INTEGER")
         with sqlite3.connect(legacy.tombstones) as conn:
             conn.execute("CREATE TABLE IF NOT EXISTS v2_owners("
                          "id TEXT PRIMARY KEY,binding TEXT NOT NULL,run_id TEXT NOT NULL)")
@@ -140,7 +144,9 @@ class ParserLedger:
                 conn.execute("UPDATE v2_spend SET reserved_micro_usd=reserved_micro_usd+? "
                              "WHERE budget_key=?",
                              (llm_cost_micro_usd, GPT_VALIDATION_BUDGET_KEY))
-            conn.execute("INSERT INTO v2_calls VALUES(?,?,?,?,?,?,?,?,0,NULL,?)", (
+            conn.execute("INSERT INTO v2_calls(request_id,call_id,body_hash,operation,pass_id,"
+                         "stage_index,attempt_no,status,remote_attempted,response,"
+                         "cost_reserved_micro_usd) VALUES(?,?,?,?,?,?,?,?,0,NULL,?)", (
                 call.root.request_id, call.call_id, _hash(call.model_dump()),
                 call.operation, call.pass_id, call.stage_index, count + 1,
                 "reserved", llm_cost_micro_usd,
@@ -209,12 +215,47 @@ class ParserLedger:
         with self.legacy.connect() as conn:
             conn.execute("UPDATE v2_roots SET cancelled=1 WHERE id=?", (request_id,))
 
+    def record_actual(self, call: ParseCall, actual_micro_usd: int | None) -> None:
+        if call.operation not in {"rewrite", "full_parse"} or actual_micro_usd is None:
+            return
+        if actual_micro_usd < 0:
+            raise LedgerError("invalid_actual_cost")
+        conn = self.legacy.connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT cost_reserved_micro_usd,cost_actual_micro_usd,status "
+                               "FROM v2_calls WHERE request_id=? AND call_id=?",
+                               (call.root.request_id, call.call_id)).fetchone()
+            if row is None or row["status"] != "completed":
+                raise LedgerError("cost_call_not_finished")
+            if row["cost_actual_micro_usd"] is not None:
+                if row["cost_actual_micro_usd"] != actual_micro_usd:
+                    raise LedgerError("cost_reconciliation_conflict")
+                return
+            conn.execute("UPDATE v2_calls SET cost_actual_micro_usd=? "
+                         "WHERE request_id=? AND call_id=?",
+                         (actual_micro_usd, call.root.request_id, call.call_id))
+            conn.execute("UPDATE v2_spend SET actual_micro_usd=actual_micro_usd+? "
+                         "WHERE budget_key=?", (actual_micro_usd, GPT_VALIDATION_BUDGET_KEY))
+            conn.commit()
+            if actual_micro_usd > row["cost_reserved_micro_usd"]:
+                raise LedgerError("cost_reservation_exceeded")
+        except BaseException:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def usage(self, run_id: str) -> dict[str, int]:
         with self.legacy.connect() as conn:
             jev = conn.execute("SELECT calls FROM run_budget WHERE run_id=?", (run_id,)).fetchone()
             gpt = conn.execute("SELECT reserved_micro_usd,actual_micro_usd FROM v2_spend "
                                "WHERE budget_key=?", (GPT_VALIDATION_BUDGET_KEY,)).fetchone()
+            unknown = conn.execute("SELECT COUNT(*) FROM v2_calls WHERE operation IN "
+                                   "('rewrite','full_parse') AND remote_attempted=1 "
+                                   "AND cost_actual_micro_usd IS NULL").fetchone()[0]
         return {"jev_run_reserved": int(jev[0]) if jev else 0,
                 "gpt_reserved_micro_usd": int(gpt[0]) if gpt else 0,
                 "gpt_actual_micro_usd": int(gpt[1]) if gpt else 0,
+                "gpt_unknown_cost_calls": int(unknown),
                 "gpt_limit_micro_usd": GPT_VALIDATION_LIMIT_MICRO_USD}

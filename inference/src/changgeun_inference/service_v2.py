@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import time
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from changgeun_inference.contracts_v2 import CallResponse, ParseCall, TokenUsage
 from changgeun_inference.ledger import LedgerError
@@ -19,16 +19,28 @@ class ParserProvider(Protocol):
                                                                     TokenUsage, str | None]: ...
 
 
+class ParserProviderFailure(Exception):
+    def __init__(self, code: str, status: Literal["refused", "incomplete", "invalid_output",
+                                                  "failed"], *, usage: TokenUsage,
+                 model: str | None = None) -> None:
+        self.code, self.status, self.usage, self.model = code, status, usage, model
+        super().__init__(code)
+
+
 class ParserService:
     def __init__(
         self, provider: ParserProvider, ledger: ParserLedger, *, config_hash: str,
         run_id: str, max_jev_run_calls: int,
         llm_reservation: Callable[[ParseCall], int] | None = None,
+        llm_actual: Callable[[TokenUsage], int | None] | None = None,
         slot: asyncio.Semaphore | None = None,
     ) -> None:
+        if (llm_reservation is None) != (llm_actual is None):
+            raise ValueError("LLM quote and usage reconciliation must be configured together")
         self.provider, self.ledger = provider, ledger
         self.config_hash, self.run_id = config_hash, run_id
-        self.max_jev_run_calls, self.llm_reservation = max_jev_run_calls, llm_reservation
+        self.max_jev_run_calls = max_jev_run_calls
+        self.llm_reservation, self.llm_actual = llm_reservation, llm_actual
         self.slot = slot or asyncio.Semaphore(1)
         self.pending = 0
         self.closed = False
@@ -97,7 +109,10 @@ class ParserService:
         is_llm = call.operation in {"rewrite", "full_parse"}
         if is_llm and self.llm_reservation is None:
             raise ServiceError("llm_disabled")
-        cost = self.llm_reservation(call) if is_llm and self.llm_reservation else 0
+        try:
+            cost = self.llm_reservation(call) if is_llm and self.llm_reservation else 0
+        except ValueError as exc:
+            raise ServiceError("llm_preflight_failed") from exc
         try:
             attempt = self.ledger.reserve(call, run_id=self.run_id,
                                           max_jev_run_calls=self.max_jev_run_calls,
@@ -121,6 +136,19 @@ class ParserService:
                                     remote_attempted=True, status="completed",
                                     result=result, usage=usage, model=model).model_dump()
             self.ledger.finish(call, response)
+            if is_llm and self.llm_actual is not None:
+                self.ledger.record_actual(call, self.llm_actual(usage))
+            return response
+        except ParserProviderFailure as exc:
+            response = CallResponse(
+                request_id=call.root.request_id, call_id=call.call_id,
+                operation=call.operation, attempt_no=attempt, remote_attempted=True,
+                status=exc.status, usage=exc.usage, model=exc.model,
+                error_code=exc.code,
+            ).model_dump()
+            self.ledger.finish(call, response)
+            if is_llm and self.llm_actual is not None:
+                self.ledger.record_actual(call, self.llm_actual(exc.usage))
             return response
         except BaseException as exc:
             try:

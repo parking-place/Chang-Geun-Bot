@@ -1,6 +1,6 @@
 # 07. 공급자 독립 LLM 계약과 GPT-5 nano 프로필
 
-상태: **PLANNED**. 아래 구현·시험·실호출은 후속 작업이며 현재 완료 증거가 아니다.
+상태: **IN_PROGRESS**. strict 계약·가격예약·HTTP mock 개발시험은 완료, 실제 키/모델 접근·실비 검증과 운영 연결은 미완료다.
 
 [버전 개요](README.md) · [아키텍처](ARCHITECTURE.md) · [시험 추적](TEST_MATRIX.md) · [실행 상태](STATUS.md)
 
