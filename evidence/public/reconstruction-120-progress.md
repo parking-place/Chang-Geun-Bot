@@ -65,3 +65,9 @@
 - 공통 초안 검증기는 registry 타입·권한·주시 허용·원문 구간·목록 선택 토큰의 root/pass/scope/revision을 검사한다. 호출 직전 최신 actor와 목록을 다시 조회하며 확인 없는 쓰기 호출을 차단한다. provider가 만든 `context` 근거는 신뢰하지 않고 요청자·서버·채널·명령·인수·값과 일치하는 서버 생성 typed 문맥만 허용한다.
 - 60초 typed 후속 답변은 원래 대기 인수로만 결정적으로 변환하며 모델을 호출하지 않는다. 300초 확인은 별도의 원자적 단회 토큰이다. 새 대기 요청은 같은 채널·사용자의 이전 토큰을 폐기하며 프로세스 재시작은 모든 메모리 대기를 무효화한다. 명령 초안에서 생략한 선택 인수에만 코드 기본값이 적용된다.
 - DiscordBotLXC에서 신규 안전 시험7과 기존 Jev/오케스트레이터12를 합친 관련19 PASS, parser Ruff/mypy PASS. 이 결과는 대역·격리 DB 시험이며 실제 Discord 버튼/후속 답변 처리, C01~C47 및 I01~I08 전수 parity, 역할·주시·voice 변경의 실제 인수는 **NOT_RUN**이다. 현재 활성 bot/gateway에는 연결하지 않았다.
+
+## p10 — 별도 trace 저장소 개발 체크포인트
+
+- 업무 DB·gateway 예산 원장과 분리된 private SQLite/WAL trace-v2 파일을 추가했다. 최초 수신 시각과 정확한 7일 만료는 UPDATE trigger로 불변이며 모든 구현 조회가 만료를 필터한다. 시작 시 만료 부모·자식을 cascade 삭제하고 알 수 없는 기존 스키마는 자동 덮어쓰지 않는다. 입력·이벤트는 secret key/value/URL query를 제한적으로 마스킹한 후 저장한다. `executed_command`는 서비스 전달을 기록할 때만 설정하고 확인 대기는 null로 둘 수 있다.
+- 지정 DiscordBotLXC 격리 파일에서 경계 전/정확히 만료/삭제, TTL 불변, 호출·이벤트 요청 소속, 중복 call 거부, usage token 부분집합, 비밀 문자열 기본 마스킹, 미확인 usage, 기존 스키마 거부의 신규4시험 PASS. Ruff/mypy PASS. 이 시험에서 원격 모델 호출0·실제 지출0.
+- 제한: 로거는 아직 활성 봇·gateway에 연결되지 않았다. bounded writer/매시간 정리·모든 사본/내보내기·실제 시크릿 전체 패턴·관리자 화면·trace v1 이관은 **NOT_RUN**이다. `secure_delete`와 조회 차단만으로 물리 사본 삭제를 보증하지 않으며 외부 백업 검증은 사용자 지정대로 SKIPPED다.
