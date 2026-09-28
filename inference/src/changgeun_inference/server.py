@@ -18,7 +18,11 @@ from changgeun_inference.config import read_profile
 from changgeun_inference.contracts import DecisionRequest
 from changgeun_inference.contracts_v2 import ParseCall
 from changgeun_inference.ledger import Ledger
+from changgeun_inference.ledger_v2 import ParserLedger
+from changgeun_inference.llm_profiles import profile_from_environment
+from changgeun_inference.openai_v2 import OpenAIResponsesProvider, ParserProviderRouter
 from changgeun_inference.providers import HostedProvider, MockProvider, Provider
+from changgeun_inference.providers_v2 import HostedParserProvider
 from changgeun_inference.service import DecisionService, ServiceError
 from changgeun_inference.service_v2 import ParserService
 
@@ -79,6 +83,9 @@ def create_app(service: DecisionService, token: str,
         if parser_service is not None:
             parser_service.drain()
         await service.drain()
+        if parser_service is not None and isinstance(parser_service.provider,
+                                                      ParserProviderRouter):
+            await parser_service.provider.close()
         if isinstance(service.provider, HostedProvider):
             await service.provider.close()
 
@@ -104,6 +111,7 @@ def create_app(service: DecisionService, token: str,
             "provider": service.provider_name,
             "profile_id": service.profile_id,
             "config_hash": service.config_hash,
+            "parser_v2_ready": parser_service is not None and not parser_service.closed,
         }
 
     @app.get("/v1/usage")
@@ -162,6 +170,8 @@ def main() -> None:
     parser.add_argument("--tombstones", type=Path)
     parser.add_argument("--token-file", type=Path, required=True)
     parser.add_argument("--test-mode", action="store_true")
+    parser.add_argument("--parser-v2", action="store_true")
+    parser.add_argument("--llm-fallback", choices=("disabled", "gpt-5-nano"))
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8443)
     parser.add_argument("--tls-cert", type=Path)
@@ -189,7 +199,31 @@ def main() -> None:
         run_id=args.run_id,
         max_run_calls=max_calls,
     )
-    app = create_app(service, args.token_file.read_text().strip())
+    parser_service = None
+    if args.parser_v2:
+        if config["provider"] != "jev-api" or args.tombstones is None:
+            parser.error("parser v2 needs Jev API and durable tombstones")
+        if args.llm_fallback is None:
+            parser.error("parser v2 needs explicit --llm-fallback")
+        llm_profile = profile_from_environment({
+            "LLM_FALLBACK": args.llm_fallback,
+            "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", ""),
+        })
+        jev = HostedParserProvider(
+            hosted["endpoint"], hosted["model"], os.environ.get("JEV_HOSTED_API_KEY", "")
+        )
+        llm = OpenAIResponsesProvider(llm_profile) if llm_profile.enabled else None
+        router = ParserProviderRouter(jev, llm)
+        parser_service = ParserService(
+            router, ParserLedger(service.ledger), config_hash=config_hash,
+            run_id=args.run_id, max_jev_run_calls=max_calls,
+            llm_reservation=router.quote if llm is not None else None,
+            llm_actual=llm_profile.actual_micro_usd if llm is not None else None,
+            slot=service.slot,
+        )
+    elif args.llm_fallback is not None:
+        parser.error("--llm-fallback requires --parser-v2")
+    app = create_app(service, args.token_file.read_text().strip(), parser_service)
     uvicorn.run(
         app,
         host=args.host,

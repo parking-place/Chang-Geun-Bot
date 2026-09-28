@@ -1,6 +1,6 @@
 # 12 — Discord 단계 적용과 모델 수명 관리
 
-- 상태: **PLANNED — 개발 후보 적용·실제 인수·정식 출시를 실행하지 않은 계획**
+- 상태: **IN_PROGRESS — gateway의 명시적 v2 진입 준비만 구현·격리 검증. 개발 후보 적용·실제 인수·정식 출시는 NOT_RUN**
 - 책임: R120-31~33. 선행: [11 LXC 평가·이관](11_lxc_evaluation_and_migration.md)의 같은 후보 필수 게이트.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12.3·13·15.15·15.16.
 - 배포·검증 위치: DiscordBotLXC의 별도 bot/gateway 계정과 loopback TLS 경계 유지.
@@ -40,6 +40,8 @@
 목록 기반 참조는 동명 대상·중복 entry·조회 뒤 삭제/권한 철회·revision 변경을 실제 제한 시험 대상으로 확인한다. 지원 크기 초과 시 명시적 안내나 범위 축소를 제시해야 하며, 조용한 top-K/잘림·모든 페이지의 추가 모델 호출로 대체하지 않는다. 새 이름·검색어의 원문 추출 성적과 목록 전달 완전성은 서로 다른 인수 기록으로 남긴다.
 
 ## R120-32 — 모델 프로필 수명과 비활성 경로
+
+p12 개발 체크포인트에서 gateway CLI에 기본 비활성 `--parser-v2`와 필수 `--llm-fallback disabled|gpt-5-nano`를 추가했다. v2는 Jev API와 영속 tombstone이 있을 때만 생성하며, 기존 API1.2와 한 dispatch semaphore를 공유한다. `disabled` 경로는 OpenAI 키 없이 시작할 수 있고 GPT 프로필은 키가 없으면 시작 전 오류로 멈춘다. 인증된 health의 `parser_v2_ready`와 v2 usage를 LXC 대역에서 확인했다. 이 코드는 **활성 서비스에서 사용하지 않았고** bot의 새 자연어 진입점도 아직 연결되지 않았다. [실행 증거](../../../evidence/public/reconstruction-120-progress.md)를 참조한다.
 
 | 상황 | 전환 정책과 필수 근거 |
 | --- | --- |
