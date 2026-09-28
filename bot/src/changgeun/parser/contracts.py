@@ -20,6 +20,7 @@ class Evidence:
     end: int | None = None
     snapshot_id: str | None = None
     selection_id: str | None = None
+    context_id: str | None = None
 
 
 @dataclass(frozen=True)

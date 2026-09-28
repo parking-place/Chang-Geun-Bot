@@ -82,6 +82,7 @@ class ParserOrchestrator:
         self.fallback_on_jev_unavailable = fallback_on_jev_unavailable
         self.rewrite_validator = RewritePolicyValidator()
         self.cancelled = False
+        self.snapshots: dict[str, CollectionSnapshot] = getattr(interpreter, "snapshots", {})
 
     async def cancel(self) -> None:
         self.cancelled = True
@@ -212,6 +213,8 @@ class ParserOrchestrator:
                             root_id=root_id, pass_id="full_parse",
                             scope_hash=scope_hash, guild=guild, member=member,
                         )
+                        selected_snapshot = collections[(identifier, argument.name)]
+                        self.snapshots[selected_snapshot.snapshot_id] = selected_snapshot
             schema = full_parse_schema(selected, collections=collections, scope=scope,
                                        command_id=confirmed_command)
         except ParseError as exc:
@@ -244,8 +247,12 @@ class ParserOrchestrator:
         for argument in spec.arguments:
             value = plan["arguments"][argument.name]
             if value is None:
-                arguments[argument.name] = argument.default
-                evidence[argument.name] = Evidence("default")
+                if argument.required:
+                    return ParserOutcome("clarify", code="missing_argument",
+                                         missing=(argument.name,))
+                # Only an absent argument may receive a code-owned default.
+                # In particular, false and zero must remain explicit values.
+                continue
             elif argument.collection:
                 if value["query"] is not None:
                     return ParserOutcome("clarify", code="unresolved_reference",

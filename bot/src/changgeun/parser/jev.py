@@ -97,6 +97,7 @@ class JevInterpreter:
     def __init__(self, commands: CommandService, model: ModelPort, db: Database,
                  policy: Policy) -> None:
         self.commands, self.model, self.db, self.policy = commands, model, db, policy
+        self.snapshots: dict[str, CollectionSnapshot] = {}
 
     async def interpret(
         self, view: NormalizedInput, actor: Actor, *, root_id: str, pass_id: str,
@@ -184,6 +185,7 @@ class JevInterpreter:
                                        if argument.depends_on else None),
                             guild=guild, member=member,
                         )
+                        self.snapshots[collection.snapshot_id] = collection
                     except ParseError as exc:
                         if exc.code in {"collection_overflow", "collection_empty",
                                         "collection_scope_required", "unsupported_collection"}:
@@ -194,8 +196,6 @@ class JevInterpreter:
                     choices = _choice_set(argument, view, snapshot=collection)
                 except ParseError as exc:
                     if exc.code == "optional_unmentioned":
-                        arguments[argument.name] = argument.default
-                        evidence[argument.name] = Evidence("default")
                         continue
                     if exc.code in {"missing_argument", "source_candidate_overflow"}:
                         return ParserOutcome("clarify", code=exc.code,
@@ -218,8 +218,6 @@ class JevInterpreter:
                 token = _selected(answers[key], choices.question["criteria"])
                 if token in SENTINELS:
                     if token == "__MISSING__" and not argument.required:
-                        arguments[argument.name] = argument.default
-                        evidence[argument.name] = Evidence("default")
                         continue
                     return ParserOutcome("clarify" if token != "__NO_MATCH__" else "failed",
                                          code=token.lower().strip("_"),

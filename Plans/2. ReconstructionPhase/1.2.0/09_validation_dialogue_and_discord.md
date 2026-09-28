@@ -1,6 +1,6 @@
 # 09. 공통 검증·typed 후속 입력·Discord 실행 연결
 
-상태: **PLANNED**. 실제 Discord 인수와 새 후보 적용은 후속 검증 전까지 미완료다.
+상태: **IN_PROGRESS**. p9 개발 체크포인트의 검증기·단회 대기·typed 값 해석은 DiscordBotLXC mock 시험을 통과했다. Discord 진입점 연결·전수 인수·새 후보 적용은 미완료다.
 
 [버전 개요](README.md) · [아키텍처](ARCHITECTURE.md) · [시험 추적](TEST_MATRIX.md) · [실행 상태](STATUS.md)
 
@@ -72,6 +72,8 @@ entity query는 실제 범위의 목록 재조회/질문을 위한 값이며 실
 - **R120-20:** 실제 Discord 명령·preview·질문·취소·개인 응답은 사용자 결과와 자동 증거를 분리하여 기록한다.
 
 ## 종료 게이트
+
+p9 구현 기록: `parser/validation.py`는 명령·인수·원문/목록 근거, 최신 목록 revision과 최신 actor/주시 허용을 실행 직전에 다시 검사한다. `pending.py`는 요청자·서버·채널·root에 결합한 60초 typed/300초 확인을 원자적으로 한 번만 소모하고 새 요청이 이전 대기를 교체한다. `followup.py`는 소비된 typed 답변을 대기 인수의 타입으로만 해석한다. 기본값은 초안에 인수가 실제로 빠진 때만 적용한다. 이는 아직 Discord UI/메시지 처리에 연결되지 않은 개발 코드다. 실행 결과는 [공개 실행 기록](../../../evidence/public/reconstruction-120-progress.md)을 참조한다.
 
 - [ ] R120-18/19/20과 전체 명령·후속 조작 coverage의 누락이 해소되거나 실패로 명시된다.
 - [ ] fresh auth·멱등성·원문 근거·개인 응답·주시 revocation을 우회하는 경로가 없다.

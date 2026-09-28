@@ -19,7 +19,7 @@
 | 06 | [Jev 두 패스](06_jev_interpreter.md) | IN_PROGRESS | [p6 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock8 PASS | 실제Jev 품질·복수선택/전체인수 |
 | 07 | [LLM 프로필](07_llm_provider_profiles.md) | IN_PROGRESS | [p7 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock13 PASS | 실호출/실비·계정경계·전체계약 |
 | 08 | [복구 전이](08_rewrite_and_fallback_orchestration.md) | IN_PROGRESS | [p8 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC14 PASS | 실제통합 전이·후보/의미 검증 |
-| 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | PLANNED | — / NOT_RUN | 단회후속·실제확인·권한 |
+| 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | IN_PROGRESS | [p9 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC19 PASS | Discord 연결·전수후속/권한·실제확인 미완료 |
 | 10 | [로그·보관](10_structured_logs_and_retention.md) | PLANNED | — / NOT_RUN |7일·usage·원장 분리 |
 | 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | PLANNED | — / NOT_RUN | 고정 후보의 독립 품질/복귀 |
 | 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | PLANNED | — / NOT_RUN | 동일 후보 Discord·수명·최종판정 |
