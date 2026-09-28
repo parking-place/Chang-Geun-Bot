@@ -68,17 +68,18 @@ def policy_for_request(
         raise DomainError("identity_mismatch")
     if source["revoked"]:
         raise DomainError("watch_request_revoked")
-    if source["origin"] != "prefix":
+    if source["origin"] not in {"prefix", "prefix_component"}:
         return policy
     if not prefix_enabled:
         raise DomainError("watch_unavailable")
-    message = conn.execute(
-        "SELECT 1 FROM message_requests WHERE guild_id=? AND request_id=? AND actor_id=? "
-        "AND channel_id=? AND state IN ('running','waiting','committed')",
-        (actor.guild_id, source["request_id"], actor.user_id, actor.text_channel_id),
-    ).fetchone()
-    if not message:
-        raise DomainError("message_request_cancelled")
+    if source["origin"] == "prefix":
+        message = conn.execute(
+            "SELECT 1 FROM message_requests WHERE guild_id=? AND request_id=? AND actor_id=? "
+            "AND channel_id=? AND state IN ('running','waiting','committed')",
+            (actor.guild_id, source["request_id"], actor.user_id, actor.text_channel_id),
+        ).fetchone()
+        if not message:
+            raise DomainError("message_request_cancelled")
     check_watch(
         conn,
         actor.guild_id,
@@ -92,7 +93,7 @@ def policy_for_request(
 def bind_source(
     conn: sqlite3.Connection, guild: str, request: str, actor: str, channel: str, origin: str
 ) -> None:
-    if origin not in {"slash", "mention", "prefix"}:
+    if origin not in {"slash", "mention", "prefix", "prefix_component"}:
         raise DomainError("invalid_request_source")
     old = source_row(conn, guild, request)
     if old:
@@ -100,7 +101,7 @@ def bind_source(
             raise DomainError("identity_mismatch")
         return
     enable = generation = revision = None
-    if origin == "prefix":
+    if origin in {"prefix", "prefix_component"}:
         row = conn.execute(
             "SELECT s.enable_generation,c.channel_generation,s.revision FROM watch_settings s "
             "JOIN watch_channels c ON c.guild_id=s.guild_id WHERE s.guild_id=? "
@@ -128,7 +129,7 @@ def admission_valid(conn: sqlite3.Connection, guild: str, entry: str) -> bool:
         )
     if row["revoked"] or row["origin"] == "legacy_unknown":
         return False
-    if row["origin"] == "prefix":
+    if row["origin"] in {"prefix", "prefix_component"}:
         try:
             check_watch(
                 conn,
@@ -273,7 +274,8 @@ class WatchStore:
             (guild, channel, channel),
         ).fetchone()[0]
         admissions = conn.execute(
-            "SELECT count(*) FROM audio_admissions WHERE guild_id=? AND origin='prefix' "
+            "SELECT count(*) FROM audio_admissions WHERE guild_id=? "
+            "AND origin IN ('prefix','prefix_component') "
             "AND revoked=0 AND started=0 AND (? IS NULL OR text_channel_id=?)",
             (guild, channel, channel),
         ).fetchone()[0]
@@ -302,13 +304,15 @@ class WatchStore:
             (guild, channel, channel),
         )
         conn.execute(
-            "UPDATE request_sources SET revoked=1 WHERE guild_id=? AND origin='prefix' "
+            "UPDATE request_sources SET revoked=1 WHERE guild_id=? "
+            "AND origin IN ('prefix','prefix_component') "
             "AND (? IS NULL OR channel_id=?)",
             (guild, channel, channel),
         )
         # Started streams keep playing; their next/repeated start still needs a fresh approval.
         conn.execute(
-            "UPDATE audio_admissions SET revoked=1 WHERE guild_id=? AND origin='prefix' "
+            "UPDATE audio_admissions SET revoked=1 WHERE guild_id=? "
+            "AND origin IN ('prefix','prefix_component') "
             "AND (? IS NULL OR text_channel_id=?)",
             (guild, channel, channel),
         )

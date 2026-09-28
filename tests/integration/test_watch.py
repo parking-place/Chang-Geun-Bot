@@ -19,6 +19,7 @@ from changgeun.application.watch import (
     WatchStore,
     admission_valid,
     bind_source,
+    policy_for_request,
 )
 from changgeun.config import BotConfig
 from changgeun.discord_adapter.client import ChangGeunClient
@@ -148,6 +149,22 @@ def test_seed_restart_empty_disabled_never_repopulated(env):
     assert reopened.channels("1") == [] and not reopened.state("1")["enabled"]
     change(env, "add", "21")
     assert not store.state("1")["enabled"]
+
+
+def test_prefix_component_inherits_watch_generation_and_revocation(env, tmp_path):
+    db, store, actor, policy, _ = env
+    client = ChangGeunClient(BotConfig(db.path, policy, tmp_path / "audio", {}))
+    original = prefix(env)
+    client.bind_prefix_component(actor, original, "component-1")
+    with db.connect() as conn:
+        allowed = policy_for_request(conn, policy, actor, "component-1")
+    assert actor.text_channel_id in allowed.text_channel_ids
+    change(env, "disable")
+    with db.connect() as conn:
+        with pytest.raises(DomainError, match="watch_request_revoked"):
+            policy_for_request(conn, policy, actor, "component-1")
+    with pytest.raises(DomainError, match="watch_request_revoked"):
+        client.bind_prefix_component(actor, original, "component-2")
 
 
 def test_seed_failed_mutations_denied(env):

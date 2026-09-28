@@ -13,7 +13,7 @@ import time
 from collections import Counter
 from dataclasses import replace
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import discord
 import httpx
@@ -27,6 +27,7 @@ from changgeun.application.watch import (
     WatchStore,
     admission_valid,
     bind_source,
+    check_watch,
     policy_for_request,
     source_row,
 )
@@ -34,6 +35,7 @@ from changgeun.config import BotConfig
 from changgeun.discord_adapter import watch as watch_commands
 from changgeun.discord_adapter.autocomplete import catalog_choices
 from changgeun.discord_adapter.mention import MentionEntry
+from changgeun.discord_adapter.natural import dispatch as dispatch_natural
 from changgeun.discord_adapter.prefix import MessageLedger, parse_prefix
 from changgeun.discord_adapter.runtime import AudioRuntime
 from changgeun.domain.models import (
@@ -48,6 +50,7 @@ from changgeun.domain.models import (
     normalized_name,
 )
 from changgeun.nlp.client import GatewayClient
+from changgeun.nlp.command_registry import CommandSelector, structured_alias
 from changgeun.nlp.pipeline import Pipeline
 from changgeun.providers.media import YouTubeMetadata
 from changgeun.providers.youtube import YouTubeData
@@ -143,6 +146,8 @@ def natural_failure(exc: Exception) -> tuple[str, str]:
             "inference_response_too_large",
         }:
             return "gateway", "자연어 판단을 안전하게 확인하지 못했어. 슬래시 명령을 사용해줘."
+        if code == "natural_missing_argument":
+            return "missing", "대상이나 값을 특정해줘. 예: ‘운동용 목록의 세 번째 곡을 빼줘’."
         return "invalid", "요청을 실행하지 않았어. 대상과 현재 상태를 확인해줘."
     if isinstance(exc, httpx.HTTPStatusError):
         if exc.response.status_code == 429:
@@ -162,7 +167,9 @@ def help_text(
     watched_here: bool,
 ) -> str:
     """Render only the commands and watch state visible from this channel."""
-    if actor is None or actor.text_channel_id not in policy.text_channel_ids:
+    if actor is None or (
+        actor.text_channel_id not in policy.text_channel_ids and not watched_here
+    ):
         return "이 채널에서는 사용법만 안내할게. 허용된 채널에서 /도움말을 다시 열어줘."
     lines = ["목록은 /목록 보기, 등록 곡은 /검색에서 확인할 수 있어."]
     if actor.role_ids & policy.dj_role_ids or policy.admin_dj_override and actor.manage_guild:
@@ -180,7 +187,7 @@ def help_text(
         lines.append("이 채널에서는 ‘!!창근아 목록 보여줘’처럼 말해줘.")
     elif prefix_enabled:
         lines.append("이 채널의 접두어 주시는 켜져 있지 않아.")
-    if actor.manage_guild:
+    if actor.manage_guild and actor.text_channel_id in policy.text_channel_ids:
         lines.append(
             "서버 관리자는 /주시 목록·점검으로 상태를 확인하고 "
             "/주시 추가·제거·켜기·끄기로 관리할 수 있어."
@@ -290,10 +297,12 @@ class PageView(discord.ui.View):
         action: Action,
         arguments: dict[str, Any],
         result: dict[str, Any],
+        source_request: str | None = None,
     ) -> None:
         super().__init__(timeout=300)
         self.client, self.actor, self.action = client, actor, action
         self.arguments, self.result = arguments, result
+        self.source_request = source_request
         self.fingerprint = digest(result)
         self.page = 0
         for item in tuple(self.children):
@@ -351,7 +360,11 @@ class PageView(discord.ui.View):
             str(interaction.channel_id),
         ) != (self.actor.user_id, self.actor.guild_id, self.actor.text_channel_id):
             raise DomainError("identity_mismatch")
-        actor = await self.client.fresh_actor(interaction)
+        if self.source_request:
+            self.client.bind_prefix_component(self.actor, self.source_request, str(interaction.id))
+            actor = await self.client.fresh_actor(interaction, request_id=str(interaction.id))
+        else:
+            actor = await self.client.fresh_actor(interaction)
         plan = self.client.make_plan(
             actor, str(interaction.id) + ".page-read", self.action, self.arguments
         )
@@ -576,9 +589,21 @@ class YouTubeSelection(discord.ui.View):
             if not value.isdecimal() or not 0 <= int(value) < len(self.identifiers):
                 return
             self.used = True
-            fresh = await client.fresh_actor(interaction)
+            try:
+                with client.db.connect() as conn:
+                    original = source_row(conn, actor.guild_id, request_id)
+                if original and original["origin"] == "prefix":
+                    client.bind_prefix_component(actor, request_id, str(interaction.id))
+                    fresh = await client.fresh_actor(interaction, request_id=str(interaction.id))
+                else:
+                    fresh = await client.fresh_actor(interaction)
+            except DomainError:
+                await interaction.response.send_message(
+                    "권한이나 주시 상태가 바뀌었어. 다시 요청해줘.", ephemeral=True
+                )
+                return
             plan = ActionPlan(
-                request_id + ".select",
+                str(interaction.id),
                 fresh.guild_id,
                 fresh.user_id,
                 Action.TRACK_PLAY,
@@ -627,6 +652,8 @@ class ChangGeunClient(discord.Client):
         self.prefix_ready = False
         self.prefix_status = "disabled"
         self.natural_failures: Counter[str] = Counter()
+        self.recovery_messages: dict[str, float] = {}
+        self.recovery_active: set[tuple[str, str]] = set()
         self.tree = app_commands.CommandTree(self)
         self.audio = AudioRuntime(
             self,
@@ -642,6 +669,7 @@ class ChangGeunClient(discord.Client):
         )
         self.timer_task: asyncio.Task[None] | None = None
         self.pipeline: Pipeline | None = None
+        self.command_selector: CommandSelector | None = None
         self.gateway: GatewayClient | None = None
         if config.inference is not None:
             decision = config.inference["decision"]
@@ -654,6 +682,12 @@ class ChangGeunClient(discord.Client):
             self.pipeline = Pipeline(
                 self.db,
                 config.policy,
+                self.gateway,
+                confidence=decision["confidence_threshold"],
+                margin=decision["margin_threshold"],
+                prompt_version=decision["prompt_version"],
+            )
+            self.command_selector = CommandSelector(
                 self.gateway,
                 confidence=decision["confidence_threshold"],
                 margin=decision["margin_threshold"],
@@ -719,7 +753,7 @@ class ChangGeunClient(discord.Client):
         )
         with self.db.connect() as conn:
             source = source_row(conn, str(guild.id), request) if request else None
-        prefix = source is not None and source["origin"] == "prefix"
+        prefix = source is not None and source["origin"] in {"prefix", "prefix_component"}
         if not prefix and str(interaction.channel_id) not in self.config.policy.text_channel_ids:
             raise DomainError("text_channel_not_allowed")
         if prefix:
@@ -771,6 +805,34 @@ class ChangGeunClient(discord.Client):
                 raise DomainError("text_channel_not_allowed")
         return actor
 
+    def bind_prefix_component(self, actor: Actor, original_request: str, component: str) -> None:
+        """Carry a watched message's generation into an owned component event."""
+        with self.db.transaction() as conn:
+            original = source_row(conn, actor.guild_id, original_request)
+            if (
+                original is None
+                or original["origin"] != "prefix"
+                or original["revoked"]
+                or (original["actor_id"], original["channel_id"])
+                != (actor.user_id, actor.text_channel_id)
+            ):
+                raise DomainError("watch_request_revoked")
+            check_watch(
+                conn,
+                actor.guild_id,
+                actor.text_channel_id,
+                original["enable_generation"],
+                original["channel_generation"],
+            )
+            bind_source(
+                conn,
+                actor.guild_id,
+                component,
+                actor.user_id,
+                actor.text_channel_id,
+                "prefix_component",
+            )
+
     def request_policy(self, actor: Actor, request: str) -> Any:
         with self.db.connect() as conn:
             return policy_for_request(
@@ -799,7 +861,7 @@ class ChangGeunClient(discord.Client):
                 raise DomainError("watch_admission_expired")
         if row is None:
             raise DomainError("audio_admission_missing")
-        if row["origin"] == "prefix":
+        if row["origin"] in {"prefix", "prefix_component"}:
             if (
                 not self.config.prefix.enabled
                 or not self.intents.message_content
@@ -1039,10 +1101,15 @@ class ChangGeunClient(discord.Client):
                     Action.PROPOSAL_LIST,
                     Action.HISTORY_LIST,
                 }
-                and not isinstance(interaction, MentionEntry)
                 and interaction.type != discord.InteractionType.component
             ):
-                page = PageView(self, actor, plan.action, plan.arguments, result)
+                with self.db.connect() as conn:
+                    original = source_row(conn, plan.guild_id, plan.request_id)
+                page = PageView(
+                    self, actor, plan.action, plan.arguments, result,
+                    source_request=plan.request_id
+                    if original and original["origin"] == "prefix" else None,
+                )
                 await interaction.followup.send(page.render(), view=page, ephemeral=True)
             elif plan.action == Action.PLAYLIST_EXPORT:
                 await interaction.followup.send(
@@ -1836,8 +1903,9 @@ class ChangGeunClient(discord.Client):
             except (DomainError, discord.HTTPException, TimeoutError, sqlite3.Error, ValueError):
                 return []
 
-    async def current_status(self, interaction: discord.Interaction) -> None:
-        await interaction.response.defer(ephemeral=True)
+    async def current_status(self, interaction: discord.Interaction | MentionEntry) -> None:
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True)
         try:
             actor = await self.fresh_actor(interaction)
             result = self.executor.execute(
@@ -2128,17 +2196,20 @@ class ChangGeunClient(discord.Client):
             )
 
     async def natural_input(
-        self, interaction: discord.Interaction | MentionEntry, text: str
+        self,
+        interaction: discord.Interaction | MentionEntry,
+        text: str,
+        *,
+        admin_only: bool = False,
+        quiet: bool = False,
     ) -> None:
         started = time.monotonic()
-        await interaction.response.defer(ephemeral=True, thinking=True)
-        if self.pipeline is None or self.gateway is None:
-            await interaction.followup.send(
-                "자연어 시험 연결을 준비 중이야. 슬래시 명령을 사용해줘.", ephemeral=True
-            )
-            return
+        if not quiet:
+            await interaction.response.defer(ephemeral=True, thinking=True)
         try:
             actor = await self.fresh_actor(interaction)
+            if admin_only and not actor.manage_guild:
+                return
             if not isinstance(interaction, MentionEntry) or interaction.request_id is None:
                 request = str(interaction.id)
                 with self.db.transaction() as conn:
@@ -2152,31 +2223,95 @@ class ChangGeunClient(discord.Client):
                     )
             else:
                 request = interaction.request_id
-            await self.gateway.ready()
+            async def recheck() -> None:
+                fresh = await self.fresh_actor(interaction)
+                if admin_only and not fresh.manage_guild:
+                    raise DomainError("administrator_required")
 
-            async def refresh() -> Actor:
-                return await self.fresh_actor(interaction)
-
-            plan = await self.pipeline.interpret(
-                text,
-                actor,
-                started_at=started,
-                refresh_actor=refresh,
-                request_id=request,
+            allow_dj = bool(actor.role_ids & self.config.policy.dj_role_ids) or bool(
+                self.config.policy.admin_dj_override and actor.manage_guild
             )
-            if plan is None:
-                await interaction.followup.send(
-                    "어느 대상에 어떤 동작을 할지 구체적으로 알려줘. "
-                    "슬래시 명령으로도 선택할 수 있어.",
-                    ephemeral=True,
+            choice = structured_alias(
+                text, allow_admin=actor.manage_guild, allow_dj=allow_dj,
+                admin_only=admin_only,
+            )
+            if choice is None:
+                if self.command_selector is None or self.gateway is None:
+                    if not quiet:
+                        await interaction.followup.send(
+                            "자연어 연결을 준비 중이야. 슬래시 명령을 사용해줘.",
+                            ephemeral=True,
+                        )
+                    return
+                await self.gateway.ready()
+                choice = await self.command_selector.select(
+                    text,
+                    request,
+                    started_at=started,
+                    recheck=recheck,
+                    admin_only=admin_only,
+                    allow_admin=actor.manage_guild,
+                    allow_dj=allow_dj,
                 )
+            if choice is None:
+                if not quiet:
+                    await interaction.followup.send(
+                        "어느 대상에 어떤 동작을 할지 구체적으로 알려줘. "
+                        "슬래시 명령으로도 선택할 수 있어.",
+                        ephemeral=True,
+                    )
                 return
             actor = await self.fresh_actor(interaction)
-            await self.submit_plan(interaction, plan, actor=actor)
+            await dispatch_natural(self, interaction, actor, choice, text)
         except Exception as exc:
             category, message = natural_failure(exc)
             self.natural_failures[category] += 1
-            await interaction.followup.send(message, ephemeral=True)
+            if not quiet:
+                await interaction.followup.send(message, ephemeral=True)
+
+    async def cancel_prefix_text(self, message: discord.Message) -> None:
+        """Cancel the actor's one active request before cooldown and Jev admission."""
+        if message.guild is None:
+            return
+        guild, channel, actor = (
+            str(message.guild.id),
+            str(message.channel.id),
+            str(message.author.id),
+        )
+        reference = message.reference.message_id if message.reference else None
+        with self.db.connect() as conn:
+            if reference is None:
+                rows = conn.execute(
+                    "SELECT request_id FROM message_requests WHERE guild_id=? AND channel_id=? "
+                    "AND actor_id=? AND state IN ('running','waiting') "
+                    "ORDER BY created_at DESC LIMIT 2",
+                    (guild, channel, actor),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT request_id FROM message_requests WHERE guild_id=? AND channel_id=? "
+                    "AND actor_id=? AND (message_id=? OR response_id=?) "
+                    "AND state IN ('running','waiting')",
+                    (guild, channel, actor, str(reference), str(reference)),
+                ).fetchall()
+        if len(rows) != 1:
+            await message.reply(
+                "취소할 진행 요청을 하나로 특정할 수 없어. 요청의 ‘요청 취소’ 버튼을 눌러줘.",
+                mention_author=False,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            return
+        request = str(rows[0][0])
+        if self.message_ledger.cancel_request(guild, channel, request, actor):
+            await self.cancel_watch_work(guild, [request])
+            content = "진행 요청을 취소했어."
+        else:
+            content = "이미 처리됐어. 완료된 변경은 여기서 취소할 수 없어."
+        await message.reply(
+            content,
+            mention_author=False,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
 
     async def on_message(self, message: discord.Message) -> None:
         if (
@@ -2214,6 +2349,9 @@ class ChangGeunClient(discord.Client):
             )
             await self.update_watch_health(str(message.guild.id), str(message.channel.id), healthy)
             if not healthy:
+                return
+            if body in {"내 요청 취소해", "내 요청 취소해줘", "지금 요청 취소해"}:
+                await self.cancel_prefix_text(message)
                 return
             key = (str(message.guild.id), str(message.author.id))
             now = time.monotonic()
@@ -2271,6 +2409,40 @@ class ChangGeunClient(discord.Client):
                 self.message_tasks.pop(request, None)
                 self.message_owners.pop(request, None)
             return
+        if (
+            self.config.prefix.enabled
+            and self.prefix_ready
+            and str(message.channel.id) in self.config.policy.text_channel_ids
+            and isinstance(message.channel, discord.TextChannel)
+        ):
+            recovery_body = parse_prefix(message.content)
+            if recovery_body is not None and 0 < len(recovery_body) <= 500:
+                entry = MentionEntry(message)
+                try:
+                    await watch_commands.admin(self, cast(discord.Interaction, entry))
+                except (DomainError, discord.HTTPException):
+                    return
+                now = time.monotonic()
+                self.recovery_messages = {
+                    key: expiry for key, expiry in self.recovery_messages.items() if expiry > now
+                }
+                if str(message.id) in self.recovery_messages:
+                    return
+                owner = (str(message.guild.id), str(message.author.id))
+                if (
+                    owner in self.recovery_active
+                    or len(self.recovery_active) >= 5
+                    or self.message_cooldowns.get(owner, 0) > now
+                ):
+                    return
+                self.recovery_messages[str(message.id)] = now + 300
+                self.message_cooldowns[owner] = now + 2
+                self.recovery_active.add(owner)
+                try:
+                    await self.natural_input(entry, recovery_body, admin_only=True, quiet=True)
+                finally:
+                    self.recovery_active.discard(owner)
+                return
         if str(message.channel.id) not in self.config.policy.text_channel_ids:
             return
         matched = re.match(

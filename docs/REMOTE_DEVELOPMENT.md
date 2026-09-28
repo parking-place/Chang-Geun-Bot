@@ -6,6 +6,8 @@
 
 현재 개발 봇 `patch117b`와 중계 `patch116g`를 적용했다. 봇 run은 `patch117b-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [최근 실행 기록](../evidence/public/patch-117-development-20260928.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. 정식 VERSION/태그는 만들지 않았다.
 
+1.1.8의 [새 `patch118a` 봇 wheel](../evidence/public/patch-118-development-20260928.md)은 별도 후보 경로에만 빌드·설치했다. 전체 명령 옵션/후속 답변, 독립 품질, 실제 Discord 인수 전이라 이 후보를 활성 봇으로 전환하지 않았다. 실제 Jev 개발 호출로 공유 원장 마지막 확인 값은639/3000이므로 다음 평가 전 잔여량을 재조회한다.
+
 `changgeun-dev-bot.service`는 봇 계정, `changgeun-jev-api.service`는 별도 `changgeun-gateway` 계정으로 실행한다. 중계는 loopback TLS8443만 받는다. 외부 API 키를 봇 계정에 제공하지 않는다. 두 개발 unit은 자동 부팅 시작으로 활성화하지 않았다.
 
 ## 상태·실제 전송·계약 회귀

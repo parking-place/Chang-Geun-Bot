@@ -1,6 +1,6 @@
 # 1.1 계열 진행 현황
 
-2026-09-28 사용자 요청으로1.1.0~1.1.7 계획을 작성했다. **8개 버전·40단계·26개 제안** 모두 개발 후보/도구 작업을 시작했다. [1.1.6 실행 기록](../../evidence/public/patch-116-development-20260928.md)과 [1.1.7 실행 기록](../../evidence/public/patch-117-development-20260928.md)은 부분 LXC 증거이며 전체 인수/출시 PASS가 아니다. 1.1.6 첫 독립 품질은 FAIL, 1.1.7 백업 검증은 사용자 지시로 SKIPPED다. 기존1.0.3 개발 후보·과거 시험 상태는 [DevPhase STATUS](../0.DevPhase/STATUS.md)에 유지한다.
+2026-09-28 작성한1.1.0~1.1.7의8개 버전·40단계·26개 제안은 개발 후보/도구 작업을 시작했다. 이후 사용자가 모든 명령의 `!!창근아` 자연어 입력을 요청해 **1.1.8의5단계·6개 항목을 추가하고 소스 개발을 시작**했다. 전체는 **9개 버전·45단계·32개 항목**이다. [1.1.6 실행 기록](../../evidence/public/patch-116-development-20260928.md)과 [1.1.7 실행 기록](../../evidence/public/patch-117-development-20260928.md)은 부분 LXC 증거이며 전체 인수/출시 PASS가 아니다. 1.1.6 첫 독립 품질은 FAIL, 1.1.7 백업 검증은 사용자 지시로 SKIPPED다. 기존1.0.3 개발 후보·과거 시험 상태는 [DevPhase STATUS](../0.DevPhase/STATUS.md)에 유지한다.
 
 ## 버전 상태
 
@@ -14,6 +14,7 @@
 | [1.1.5](1.1.5/README.md) | F-07, F-08, R-03 | IN_PROGRESS | 0 / 5 | [wheel392·중계43 PASS·개발37/37·취소 경합100·적용](../../evidence/public/patch-115-development-20260928.md); 전체 W 실제 인수 전 |
 | [1.1.6](1.1.6/README.md) | J-07, J-09, R-04 | IN_PROGRESS | 0 / 5 | [개발 비교37/37·잠금200문장 명확103/120 FAIL](../../evidence/public/patch-116-development-20260928.md); 축약 prompt 운영 미채택 |
 | [1.1.7](1.1.7/README.md) | R-05, R-06, R-07 | IN_PROGRESS | 0 / 5 | [첫 PCM94/100 FAIL·TLS/키/서비스 점검 PASS·백업 검증 SKIPPED](../../evidence/public/patch-117-development-20260928.md); 음성/운영 전체 인수 전 |
+| [1.1.8](1.1.8/README.md) | F-10~12, J-10~11, R-09 | IN_PROGRESS | 0 / 5 | [소스/`patch118a` wheel 각369 PASS·Jev 개발 예문45/46](../../evidence/public/patch-118-development-20260928.md); 미적용·독립/전건 인수 전 |
 
 ## 단계 상태
 
@@ -29,10 +30,11 @@
 | [1.1.5](1.1.5/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 | [1.1.6](1.1.6/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 | [1.1.7](1.1.7/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
+| [1.1.8](1.1.8/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 
 ## 판정 규칙
 
-기존 [상태 정의](../0.DevPhase/STATUS.md)를 따른다. 작업 착수 시 IN_PROGRESS, 소스 준비 후 지정 LXC 검증 전에는 CODE_READY로 표시할 수 있다. 계획만 작성한 현재 상태는 PLANNED다.
+기존 [상태 정의](../0.DevPhase/STATUS.md)를 따른다. 구현 작업 착수 시 IN_PROGRESS, 소스 준비 후 지정 LXC 검증 전에는 CODE_READY로 표시할 수 있다. 1.1.8의 현재 개발 예문 성적은 기능 완료나 독립 평가가 아니다.
 
 VERIFIED는 해당 단계 필수 LXC 증거가 있을 때만, DONE은 버전의 필수 게이트까지 충족했을 때만 사용한다. FAIL/SKIPPED/NOT_RUN은 실행 결과로 구분한다. 자동시험·실제 API·사람의 조작/청취를 합쳐 하나의 PASS로 표시하지 않는다.
 

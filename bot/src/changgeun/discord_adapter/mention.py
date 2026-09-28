@@ -22,6 +22,8 @@ class MessageResponse:
         return self.done
 
     async def defer(self, **kwargs: Any) -> None:
+        if self.done:
+            return
         self.done = True
         if self.followup.ledger is not None:
             await self.followup.send("요청을 확인하고 있어.", view=self.pending_view)
@@ -77,6 +79,7 @@ class MentionEntry:
         ledger: MessageLedger | None = None,
         request_id: str | None = None,
     ) -> None:
+        self.message = message
         self.id = message.id
         self.user = message.author
         self.guild = message.guild

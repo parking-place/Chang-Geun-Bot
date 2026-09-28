@@ -12,13 +12,15 @@
 
 2026-09-28 후속 계획을 추가했습니다. [1.0.1](Plans/0.DevPhase/1.0.1/README.md)은 승인 음원 매핑 없는 YouTube 영상 재생, [1.0.2](Plans/0.DevPhase/1.0.2/README.md)는 지정 채널의 `!!창근아` 한국어 문장 명령이 목표입니다. 두 버전은 개발 후보를 구현하고 지정 LXC에서 검증 중입니다. 지정 영상 URL·공식 검색 선택과 두 채널의 접두어 입력을 연결했습니다. YouTube 주소의 `https://`는 생략할 수 있습니다. [실행 증거와 남은 인수](evidence/public/youtube-prefix-20260928.md)를 따릅니다.
 
-2026-09-28 [1.0.3 주시 채널 관리](Plans/0.DevPhase/1.0.3/README.md)를 구현했습니다. 서버 관리자가 `/주시 추가·제거·목록·켜기·끄기·점검`으로 `!!창근아` 반응 채널을 관리합니다. 설정은 DB에 저장되며 관리 명령은 Jev를 호출하지 않습니다. 개발 봇에 적용했으며 사용자가 목록·점검·끄기·켜기와 접두어 반응을 정상으로 확인했습니다. [자동 회귀와 남은 전체 인수](evidence/public/watch-channels-20260928.md)를 구분합니다.
+2026-09-28 [1.0.3 주시 채널 관리](Plans/0.DevPhase/1.0.3/README.md)를 구현했습니다. 서버 관리자가 `/주시 추가·제거·목록·켜기·끄기·점검`으로 `!!창근아` 반응 채널을 관리합니다. 설정은 DB에 저장되며 이 슬래시 관리 명령은 Jev를 호출하지 않습니다. 개발 봇에 적용했으며 사용자가 목록·점검·끄기·켜기와 접두어 반응을 정상으로 확인했습니다. [자동 회귀와 남은 전체 인수](evidence/public/watch-channels-20260928.md)를 구분합니다.
+
+[1.1.8 계획](Plans/1.PatchPhase/1.1.8/README.md)은 공개 명령47개와 선택·버튼 흐름8개를 `!!창근아` 자연어 입력에 연결하는 작업입니다. 명령 등록부와 주요 경로를 구현해 [LXC 소스/휠 개발 시험](evidence/public/patch-118-development-20260928.md)을 시작했습니다. **IN_PROGRESS**이며 새 후보는 아직 활성 봇에 적용하지 않았고, 전체 옵션·후속 선택·새 독립 품질/Discord 인수는 남아 있습니다.
 
 ## 먼저 읽을 문서
 
 - [개발 명세 1.3](Plans/CHANGGEUN_DEVELOPMENT_SPEC_v1.3.md)
 - [0.0.0 → 1.0.3 버전별 계획](Plans/0.DevPhase/README.md)
-- [1.1.0 → 1.1.7 계획: 기능·Jev 최적화·안정화](Plans/1.PatchPhase/README.md)
+- [1.1.0 → 1.1.8 계획: 기능·Jev 최적화·안정화](Plans/1.PatchPhase/README.md)
 - [현재 진행 현황](Plans/0.DevPhase/STATUS.md)
 - [Jev API 전용 계약](Plans/0.DevPhase/INFERENCE_PROFILES.md)
 - [개발·검증 환경](Plans/0.DevPhase/ENVIRONMENT.md)

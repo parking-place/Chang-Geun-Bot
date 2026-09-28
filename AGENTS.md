@@ -7,7 +7,7 @@
 - 1.0.0 재생 범위는 승인 음원과 YouTube 링크/목록 관리다. `docs/decisions/0003-approved-audio-release-scope.md`를 따르며 직접 YouTube 오디오 추출·전송을 활성화하지 않는다.
 - 1.0.1/1.0.2의 후속 범위는 `docs/decisions/0006-youtube-and-prefix-roadmap.md`와 해당 버전 계획을 함께 적용한다. 현재 IN_PROGRESS이며 1.0.0 제한을 소급 제거하거나 계획만으로 기능·Discord intent를 활성화하지 않는다.
 - 1.0.3 주시 채널 관리는 사용자 구현 요청으로 IN_PROGRESS다. `docs/decisions/0007-watch-channel-management.md`와 해당 버전5단계·실행 증거를 따른다. 구현/개발 후보와 W 전건 실제 인수·정식 출시를 구분한다. 기존 DB/바이너리 복귀 묶음과 gateway 예산을 보존한다.
-- 1.1.0~1.1.7 후속 계획은 `Plans/1.PatchPhase/`의 README·EXECUTION_RULES·ITEM_COVERAGE·STATUS·TEST_MATRIX와 해당 버전 README를 따른다. 현재 1.1.0 개발 후보·부분 시험 진행 중, 1.1.1~1.1.7 PLANNED다. 계획/부분 시험만으로 정식 VERSION·태그·DONE을 만들지 않는다. 기존 미완료 인수와 후보별 증거를 유지한다.
+- 1.1.0~1.1.8 후속 계획은 `Plans/1.PatchPhase/`의 README·EXECUTION_RULES·ITEM_COVERAGE·STATUS·TEST_MATRIX와 해당 버전 README를 따른다. 모두 개발 후보·부분 시험 진행 중이며 최신 실행 결과는 STATUS를 확인한다. 1.1.8은 소스/휠 후보 개발 단계이고 활성 봇에는 미적용이다. 전체 명령의 자연어 입력은 `docs/decisions/0009-all-command-natural-language-plan.md`의 후속 설계를 따른다. 계획/부분 시험만으로 실행 계약·배포·정식 VERSION·태그·DONE을 바꾸지 않는다. 기존 미완료 인수와 후보별 증거를 유지한다.
 - 사용자의 요청 범위를 따른다. 구현·시험 증거 없이 제품 `VERSION`, 출시 태그, 완료 상태를 만들지 않는다.
 
 ## 비공개 정보와 데이터
