@@ -1,6 +1,6 @@
 # 11 — LXC 독립 평가와 이관·복귀 검증
 
-- 상태: **IN_PROGRESS — p12e 소스/새 gateway 설치 wheel 486회귀와 Jev/GPT 제한 합성호출은 실행, 독립 평가·이관은 NOT_RUN**
+- 상태: **IN_PROGRESS — p12g 소스/새 bot·gateway 설치 wheel 492회귀와 Jev/GPT 제한 합성호출은 실행, 독립 평가·이관은 NOT_RUN**
 - 책임: R120-27~30. 선행: 01~10의 계약·구현 후보와 제한 설정 준비.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12·13·15.15·15.16, [시험표](TEST_MATRIX.md).
 - 실행 위치: 모든 제품 lint·타입·단위/mock·통합·실제 모델·DB 시험은 DiscordBotLXC만 사용한다.

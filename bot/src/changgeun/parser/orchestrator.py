@@ -28,6 +28,7 @@ from changgeun.parser.llm_schema import (
     validate_rewrite_output,
 )
 from changgeun.parser.normalizer import NormalizedInput
+from changgeun.parser.registry import CommandSpec
 from changgeun.parser.values import numbers
 from changgeun.storage.database import Database
 
@@ -210,22 +211,40 @@ class ParserOrchestrator:
                    if key != "C39" and actor.guild_id in self.policy.guild_ids
                    and spec.allowed(actor, self.policy)}
         scope = "repair_arguments" if confirmed_command in allowed else "reparse"
-        selected = ({confirmed_command: allowed[confirmed_command]}
+        proposed = ({confirmed_command: allowed[confirmed_command]}
                     if scope == "repair_arguments" and confirmed_command else allowed)
+        selected: dict[str, CommandSpec] = {}
         collections: dict[tuple[str, str], CollectionSnapshot] = {}
+        unavailable: dict[str, str] = {}
         try:
-            for identifier, spec in selected.items():
-                for argument in spec.arguments:
-                    if argument.collection and not argument.depends_on:
-                        self._check(expires_at)
-                        collections[(identifier, argument.name)] = resolve_collection(
-                            spec, argument, actor, self.policy, self.db,
-                            root_id=root_id, pass_id="full_parse",
-                            scope_hash=scope_hash, guild=guild, member=member,
-                            attachments=self.attachments,
-                        )
-                        selected_snapshot = collections[(identifier, argument.name)]
-                        self.snapshots[selected_snapshot.snapshot_id] = selected_snapshot
+            for identifier, spec in proposed.items():
+                prepared: dict[tuple[str, str], CollectionSnapshot] = {}
+                try:
+                    for argument in spec.arguments:
+                        if argument.collection and not argument.depends_on:
+                            self._check(expires_at)
+                            item = resolve_collection(
+                                spec, argument, actor, self.policy, self.db,
+                                root_id=root_id, pass_id="full_parse",
+                                scope_hash=scope_hash, guild=guild, member=member,
+                                attachments=self.attachments,
+                            )
+                            if argument.required and not item.selections:
+                                raise ParseError("collection_empty")
+                            prepared[(identifier, argument.name)] = item
+                except ParseError as exc:
+                    if (scope == "repair_arguments" or exc.code not in {
+                        "collection_empty", "collection_overflow", "collection_scope_required",
+                    }):
+                        raise
+                    unavailable[identifier] = exc.code
+                    continue
+                selected[identifier] = spec
+                collections.update(prepared)
+                for item in prepared.values():
+                    self.snapshots[item.snapshot_id] = item
+            if not selected:
+                return ParserOutcome("clarify", code="no_available_commands")
             schema = full_parse_schema(selected, collections=collections, scope=scope,
                                        command_id=confirmed_command)
         except ParseError as exc:
@@ -235,6 +254,7 @@ class ParserOrchestrator:
                  "rewritten_message": rewritten_text,
                  "scope": scope,
                  "allowed_commands": {key: spec.description for key, spec in selected.items()},
+                 "unavailable_commands": unavailable,
                  "collections": {f"{key[0]}:{key[1]}": item.criteria()
                                  for key, item in collections.items() if item.selections}}
         try:
@@ -272,11 +292,13 @@ class ParserOrchestrator:
                 if collection is None:
                     return ParserOutcome("clarify", code="collection_dependency_unresolved",
                                          missing=(argument.name,))
-                item = collection.select(value["candidate_id"], root_id=root_id,
-                                         pass_id="full_parse", argument=argument.name,
-                                         scope_hash=scope_hash, revision=collection.revision)
-                arguments[argument.name] = (item.execution_value if item.execution_value is not None
-                                            else item.object_id)
+                chosen_item = collection.select(value["candidate_id"], root_id=root_id,
+                                                pass_id="full_parse", argument=argument.name,
+                                                scope_hash=scope_hash, revision=collection.revision)
+                arguments[argument.name] = (
+                    chosen_item.execution_value if chosen_item.execution_value is not None
+                    else chosen_item.object_id
+                )
                 evidence[argument.name] = Evidence("collection", snapshot_id=collection.snapshot_id,
                                                    selection_id=value["candidate_id"])
             elif argument.kind == "integer":

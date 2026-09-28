@@ -1,15 +1,19 @@
+import json
 import time
 
 import httpx
 import pytest
 
 from changgeun.application.commands import CommandService
+from changgeun.config import BotConfig
+from changgeun.discord_adapter.client import ChangGeunClient
 from changgeun.domain.models import Actor, Policy
 from changgeun.parser.contracts import CommandDraft, ParseError, ParserOutcome
 from changgeun.parser.normalizer import InputNormalizer
 from changgeun.parser.orchestrator import ParserOrchestrator, RewritePolicyValidator
-from changgeun.parser.registry import CommandSpec
+from changgeun.parser.registry import ArgumentSpec, CommandSpec
 from changgeun.storage.database import Database
+from changgeun_inference.openai_v2 import _schema_shape
 
 
 class Interpreter:
@@ -36,6 +40,12 @@ class Model:
 
     async def cancel(self):
         pass
+
+
+class CapturingModel(Model):
+    async def call(self, operation, state, **kwargs):
+        self.state, self.schema = state, kwargs.get('output_schema')
+        return await super().call(operation, state, **kwargs)
 
 
 def environment(tmp_path, interpreter, model, *, fallback=False, llm=True):
@@ -169,3 +179,62 @@ async def test_invalid_rewrite_returns_to_original_full_parse(tmp_path):
     assert result.status == 'parsed'
     assert interpreter.calls == ['initial']
     assert model.calls == ['rewrite', 'full_parse']
+
+
+@pytest.mark.asyncio
+async def test_unrelated_empty_collection_does_not_block_read_fallback(tmp_path):
+    db = Database(tmp_path / 'db.sqlite')
+    db.ensure_guild('g')
+
+    async def noop(_entry, _args):
+        raise AssertionError('parser must not execute')
+
+    read = CommandSpec('C25', '목록 보기', '재생목록 보기', (), 'public', 'read')
+    required = ArgumentSpec('목록', 'string', True, source='collection',
+                            collection='playlists')
+    rename = CommandSpec('C03', '목록 이름 변경', '목록 이름 변경', (required,),
+                         'public', 'write')
+    service = CommandService({'C25': read, 'C03': rename},
+                             {'C25': noop, 'C03': noop})
+    policy = Policy(frozenset({'g'}), frozenset(), frozenset(), frozenset())
+    actor = Actor('g', 'u', frozenset(), 'text')
+    model = CapturingModel(full=full_success())
+    parser = ParserOrchestrator(Interpreter(None), model, service, db, policy,
+                                llm_enabled=True)
+    view = InputNormalizer().normalize('!!창근아 목록 보여줘', invocation='!!창근아')
+    attrs = dict(root_id='r', scope_hash='scope', expires_at=time.time() + 30)
+    result = await parser._full_parse(view, actor, **attrs)
+    assert result.status == 'parsed' and result.draft.command_id == 'C25'
+    assert model.state['unavailable_commands'] == {'C03': 'collection_empty'}
+    assert set(model.state['allowed_commands']) == {'C25'}
+    command_enum = model.schema['properties']['plan']['anyOf'][0]['properties']['command']['enum']
+    assert command_enum == ['C25']
+    model.calls.clear()
+    blocked = await parser._full_parse(view, actor, confirmed_command='C03', **attrs)
+    assert blocked.status == 'clarify' and blocked.code == 'collection_empty'
+    assert model.calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('roles,manage', [
+    (frozenset(), False), (frozenset({'dj'}), True),
+])
+async def test_actual_registry_builds_bounded_full_parse_schema(tmp_path, roles, manage):
+    policy = Policy(frozenset({'g'}), frozenset({'dj'}), frozenset(), frozenset())
+    bot = ChangGeunClient(BotConfig(tmp_path / 'db.sqlite', policy,
+                                    tmp_path / 'audio', {}))
+    bot.db.ensure_guild('g')
+    actor = Actor('g', 'u', roles, 'text', manage_guild=manage)
+    model = CapturingModel(full={
+        'status': 'needs_clarification', 'plan': None,
+        'unresolved_arguments': [], 'question': '대상을 더 알려줘',
+    })
+    parser = ParserOrchestrator(Interpreter(None), model, bot.command_service,
+                                bot.db, policy, llm_enabled=True)
+    view = InputNormalizer().normalize('!!창근아 목록 보여줘', invocation='!!창근아')
+    result = await parser._full_parse(view, actor, root_id='r', scope_hash='scope',
+                                      expires_at=time.time() + 30)
+    assert result.status == 'clarify' and model.calls == ['full_parse']
+    assert 'C01' in model.state['allowed_commands']
+    _schema_shape(model.schema)
+    assert len(json.dumps(model.schema).encode()) < 196608

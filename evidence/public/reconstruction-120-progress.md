@@ -127,3 +127,10 @@
 - 비어 있는 선택형 첨부 목록은 Jev에서 생략하고 full_parse strict schema에서는 `null`만 허용한다. 이로써 첨부가 없는 링크 가져오기 초안이 불필요하게 전체 실패하지 않으며, 존재하지 않는 첨부를 모델이 만들 수 없다. 실제 첨부를 포함한 Discord 사용자 인수는 아직 수행하지 않았다.
 - 지정 DiscordBotLXC에서 새 3통합시험(단일 첨부/URL 비노출·복수 파일 언급·빈 선택형 목록)과 기존 전체를 포함한 source **489 PASS**, 전체 Ruff·mypy65파일 PASS. 새 불변 bot 후보 `recon120p12fbot` wheel SHA256 `02f56b9cabb4f3b7c940f6d4fa0acf3519702ea09daa852030adf3ad766cc5e2`, 공개 소스 manifest SHA256 `806c7dde5ea27260775c19c40ee9da2920b372ac842c4020dacd646660c90276`. YouTube 실행 의존성은 후보에 포함했고 Node/FFmpeg 지문을 후보 manifest에 고정했다. 새 bot wheel·p12e gateway wheel import 경로를 확인한 동일 회귀 **489 PASS**.
 - 활성 bot은 계속 `patch117b`, gateway는 `recon120p12egw`/LLM disabled다. 신규 bot wheel은 적용하지 않았다. 이번 단계 Jev/GPT 추가 호출0, 공유 Jev 예약645/3000·GPT 예약/실제2005/521 micro USD 그대로다. 전체 명령/상호작용 parity·독립221·실제 Discord 첨부/가져오기·이관/복귀는 **NOT_RUN/IN_PROGRESS**다.
+
+## p12g — 무관한 빈 목록이 full_parse 전체를 막지 않도록 분리
+
+- p12f까지 `full_parse`의 여러 허용 명령 중 하나라도 필수 목록이 비었거나 scope를 구성할 수 없으면 전체 schema 생성이 중단됐다. 각 명령의 실제 목록을 독립적으로 준비하고 빈 필수 목록·초과 목록·scope 미확정인 명령만 이번 호출의 실행 가능한 분기에서 제외했다. 제외 ID/사유를 모델 상태에 표시하고, 특정 명령의 인수 보수(`repair_arguments`)에서는 해당 명령의 목록 오류를 그대로 질문/종료한다. 사용할 명령이 하나도 없으면 모델을 호출하지 않는다.
+- 지정 DiscordBotLXC에서 무관한 빈 재생목록이 C25 읽기 fallback을 막지 않는지, 확인된 C03 보수는 그대로 `collection_empty`로 멈추는지 검사했다. 실제47개 slash 등록부에서 일반 사용자와 DJ/관리자 범위의 strict full_parse schema를 생성해 모양과196608-byte 상한을 검사했다. 이는 schema 생성 가능성이지 해당 명령의 의미 정확도 인수가 아니다.
+- 공개 소스 manifest SHA256 `9f6a08ea39bd54e609f7421fafdc3470992ae6ee0d21e642a38fd02524beeccf`, 새 불변 bot 후보 `recon120p12gbot` wheel SHA256 `369972170dd011568fddfc37a460c7fcbefd2d8293dd0bb5055cc5d7b9e56881`. 지정 LXC source 전체 **492 PASS**, 새 bot wheel·p12e gateway wheel 우선 import 전체 **492 PASS**, Ruff PASS·mypy65파일 PASS. bot 서비스는 `patch117b` 그대로이며 이번 단계 외부 Jev/GPT 호출0·원장645/3000 및2005/521 micro USD를 유지한다.
+- 여러 명령 중 제외된 명령이 사용자 의도였는지에 대한 품질은 별도 독립평가 대상이다. 전체47명령 옵션/I01~I08·221문장·실제 Discord 신규 후보/인수·trace 운영/이관은 **NOT_RUN/IN_PROGRESS**다.

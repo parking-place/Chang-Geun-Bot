@@ -1,6 +1,6 @@
 # 08. rewrite·재해석·full fallback 상태 전이
 
-상태: **IN_PROGRESS**. 유한 상태 전이·보호 리터럴 검사·mock 전이 시험은 완료, 실제 후보/Discord·최악8회 통합 시험은 미완료다.
+상태: **IN_PROGRESS**. 유한 상태 전이·보호 리터럴·p12g 명령별 full_parse 목록 분리의 LXC 시험은 완료, 실제 Discord·최악8회 통합/독립품질 시험은 미완료다.
 
 [버전 개요](README.md) · [아키텍처](ARCHITECTURE.md) · [시험 추적](TEST_MATRIX.md) · [실행 상태](STATUS.md)
 
@@ -29,6 +29,8 @@
 | LLM 거절·인증·통신·제한·timeout·요청 오류 | 종료, 다른 mode로 통신 재시도 금지 |
 | Jev unavailable | 허용 설정·LLM 가용·잔여 예산이 모두 있을 때 원문 full_parse |
 | full_parse 완료 또는 실패 | 공통 검증/질문/종료, 모델 경로 재진입 금지 |
+
+p12g 후보는 `reparse`의 각 명령에 필요한 실제 목록을 따로 준비한다. 필수 목록이 비었거나 너무 크거나 범위가 정해지지 않은 명령은 그 호출의 실행 가능한 schema 분기에서 제외하고 ID/사유를 상태에 전달한다. 이미 명령을 확인한 `repair_arguments`는 해당 오류를 질문/종료하며 다른 명령으로 바꾸지 않는다. 무관한 명령의 빈 목록 때문에 읽기 요청 전체를 중단하지 않도록 한 변경이다. 제외된 명령이 실제 사용자 의도였을 때의 질문 품질은 독립 평가와 실제 Discord 인수에서 확인해야 한다. [실행 기록](../../../evidence/public/reconstruction-120-progress.md)을 참조한다.
 
 ## 구현 작업
 
