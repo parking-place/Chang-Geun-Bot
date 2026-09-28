@@ -4,9 +4,9 @@
 
 ## 현재 적용 상태
 
-현재 개발 봇 `patch117b`와 중계 `patch116g`를 적용했다. 봇 run은 `patch117b-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [최근 실행 기록](../evidence/public/patch-117-development-20260928.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. 정식 VERSION/태그는 만들지 않았다.
+현재 개발 봇 `recon120p12hbot`(v2/LLM disabled)과 중계 `recon120p12egw`(v2/LLM disabled)를 테스트 서버에 적용했다. 봇 run은 `recon120p12h-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [1.2.0 실행 기록](../evidence/public/reconstruction-120-progress.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. 실제 자연어 사용자 인수·전체 출시 게이트는 미완료이며 정식 VERSION/태그는 만들지 않았다.
 
-1.1.8의 [새 `patch118a` 봇 wheel](../evidence/public/patch-118-development-20260928.md)은 별도 후보 경로에만 빌드·설치했다. 전체 명령 옵션/후속 답변, 독립 품질, 실제 Discord 인수 전이라 이 후보를 활성 봇으로 전환하지 않았다. 실제 Jev 개발 호출로 공유 원장 마지막 확인 값은639/3000이므로 다음 평가 전 잔여량을 재조회한다.
+1.1.8의 [이전 `patch118a` 봇 wheel](../evidence/public/patch-118-development-20260928.md)은 격리 후보로 남겨 둔다. 현재 활성 `p12h` 후보는 LXC source/설치 wheel 각각492회귀를 통과했다. 공유 Jev 예약 마지막 확인 값은645/3000, GPT 예약/실제는2005/521 micro USD이며 다음 평가 전 재조회한다. GPT 키의 임시 LXC 사본은 제거했고 gateway는 disabled다.
 
 `changgeun-dev-bot.service`는 봇 계정, `changgeun-jev-api.service`는 별도 `changgeun-gateway` 계정으로 실행한다. 중계는 loopback TLS8443만 받는다. 외부 API 키를 봇 계정에 제공하지 않는다. 두 개발 unit은 자동 부팅 시작으로 활성화하지 않았다.
 
@@ -41,13 +41,14 @@ python3 /opt/changgeun-dev/source/scripts/prepare_candidate.py --candidate NEW_G
 
 ## 봇 후보 전환
 
-현재 봇 전환 도구는 준비된 한 LXC 중계·프로필과 제한 binding을 사용한다. `NEW_BOT`, `NEW_RUN`은 준비한 새 후보/run으로 바꾼다. 동시에 여러 전환을 실행하지 않는다.
+현재 봇 전환 도구는 준비된 한 LXC 중계·프로필과 제한 binding을 사용한다. `NEW_BOT`, `NEW_RUN`은 준비한 새 후보/run으로 바꾼다. 동시에 여러 전환을 실행하지 않는다. 이전 `test_profile.py --suite activate` 경로는 v1이며, v2 전환에는 명시적 `--parser-v2`를 사용한다.
 
 ```bash
 python3 scripts/test_profile.py --ssh-config .private/lxc-ssh.conf --profile jev-api --config-id eval-jev-api-single-lxc-v1 --suite activate --candidate NEW_BOT --run-id NEW_RUN --prefix-channels --youtube-audio
+python3 scripts/deploy_watch_candidate.py --ssh-config .private/lxc-ssh.conf --candidate NEW_V2_BOT --run-id NEW_V2_RUN --parser-v2
 ```
 
-이는 `deploy_watch_candidate.py`의 봇 전용 전환을 호출한다. 새 bot-config/unit 준비 → 중계 TLS readiness → 기존 봇 정지 → 기존 DB의 일관성 복사 → 새 봇 시작 순서다. 중계 원장/예산은 변경하지 않는다. 실패 시 이전 unit 복구를 구현했으며 전체 장애 주입 인수는 남아 있다. 전환은 현재곡을 중단하며 새 시작에서 자동 음성 입장/재생은 하지 않는다.
+첫 명령은 `deploy_watch_candidate.py`의 봇 전용 v1 전환을 호출한다. 둘째 명령은 gateway가 v2/LLM disabled일 때만 새 parser와 private trace를 켠다. 새 bot-config/unit 준비 → 중계 TLS readiness → 기존 봇 정지 → 기존 DB의 일관성 복사 → 새 봇 시작 순서다. 중계 원장/예산은 변경하지 않는다. 실패 시 이전 unit 복구를 구현했으며 전체 장애 주입 인수는 남아 있다. 전환은 현재곡을 중단하며 새 시작에서 자동 음성 입장/재생은 하지 않는다. 전환 후 새 DB에 변경이 생긴 경우 구 DB로 단순 복귀하면 변경이 누락되므로, 실제 rollback 전에는 변경분 보존/이관을 별도 검증한다.
 
 이전 run/DB/바이너리를 보존한다. migration6 DB를 이전 바이너리에 연결하지 않으며 rollback은 이전 DB/바이너리 묶음을 사용한다. 새 DB/주시 설정/감사도 보존한다. 일반 슬래시/멘션 허용 채널은 기존 활성 설정에서 이어받으며 prefix 주시 등록으로 확장하지 않는다.
 

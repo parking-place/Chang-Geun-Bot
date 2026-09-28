@@ -1,6 +1,6 @@
 # 12 — Discord 단계 적용과 모델 수명 관리
 
-- 상태: **IN_PROGRESS — p12e gateway는 Jev v2/LLM disabled, p12g bot wheel은 격리 검증만 완료. 새 bot 적용·실제 인수·정식 출시는 NOT_RUN**
+- 상태: **IN_PROGRESS — p12h bot v2와 p12e gateway v2/LLM disabled를 테스트 서버에 적용. Discord API 확인 완료; 사용자 실제 인수·정식 출시는 미완료**
 - 책임: R120-31~33. 선행: [11 LXC 평가·이관](11_lxc_evaluation_and_migration.md)의 같은 후보 필수 게이트.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12.3·13·15.15·15.16.
 - 배포·검증 위치: DiscordBotLXC의 별도 bot/gateway 계정과 loopback TLS 경계 유지.
@@ -56,6 +56,8 @@ p12e에서는 GPT 프로필을 제한 합성시험 동안만 켰다. 기본 reas
 p12f에서는 자연어 첨부 인수에 현재 메시지의 실제 첨부 목록과 재검증을 연결하고 새 bot wheel `recon120p12fbot`을 격리 빌드·회귀 시험했다. bot 서비스는 계속 이전 후보이므로 실제 첨부 가져오기 인수가 아니다.
 
 p12g에서는 무관한 빈/초과 필수 목록이 `full_parse` 전체를 중단하지 않도록 명령별 실행 가능한 schema 분기를 만들었다. 새 bot wheel `recon120p12gbot`은 지정 LXC 회귀를 통과했지만 서비스 적용/실제 Discord 인수는 아직 수행하지 않았다.
+
+p12h에서는 `p12g` 후보가 시스템 Node20을 고정해 전환 사전검사에서 거부된 뒤, 기존 재생 설정의 검증된 Node22 경로를 manifest에 고정한 `recon120p12hbot`을 새로 만들었다. 지정 LXC source/새 wheel 각492회귀 통과 후 `natural_parser_version=v2`·`parser_llm_fallback=disabled`와 별도 trace DB로 개발 봇을 전환했다. 기존 unit/DB를 보존하고 Discord API 인증·테스트 서버 명령 등록·서비스/DB/trace 무결성을 확인했다. 이는 사용자 명령의 기능 인수와 독립 품질 평가를 대체하지 않는다. [실행 기록](../../../evidence/public/reconstruction-120-progress.md)을 참조한다.
 
 | 상황 | 전환 정책과 필수 근거 |
 | --- | --- |

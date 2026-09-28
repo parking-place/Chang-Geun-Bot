@@ -224,6 +224,16 @@ def main() -> None:
                     "value": "!!창근아",
                     "allowed_text_channel_ids": channels,
                 }
+            parser_version = plan.get("natural_parser_version", "v1")
+            llm_profile = plan.get("parser_llm_fallback", "disabled")
+            if parser_version not in {"v1", "v2"} or llm_profile != "disabled":
+                parser.error("bot switch requires an explicit supported parser profile")
+            config["commands"]["natural_parser_version"] = parser_version
+            config["commands"]["parser_llm_fallback"] = llm_profile
+            if parser_version == "v2":
+                config["commands"]["parser_trace_path"] = str(run_dir / "parser-trace.db")
+            else:
+                config["commands"].pop("parser_trace_path", None)
             command = [
                 str(interpreter),
                 "-m",
@@ -294,7 +304,9 @@ def main() -> None:
             "import asyncio,sys; from pathlib import Path; "
             "from changgeun.config import BotConfig; "
             "from changgeun.nlp.client import GatewayClient; "
-            "c=BotConfig.read(Path(sys.argv[1])); asyncio.run(GatewayClient(c.inference).ready())"
+            "c=BotConfig.read(Path(sys.argv[1])); g=GatewayClient(c.inference); "
+            "asyncio.run(g.parser_ready(c.parser_llm_fallback) if "
+            "c.natural_parser_version=='v2' else g.ready())"
         )
         for _attempt in range(30):
             checked = subprocess.run(

@@ -19,6 +19,7 @@ def main() -> None:
     parser.add_argument("--ssh-config", type=Path, required=True)
     parser.add_argument("--candidate", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--parser-v2", action="store_true")
     args = parser.parse_args()
     if not args.ssh_config.is_file() or args.ssh_config.stat().st_mode & 0o077:
         parser.error("restricted SSH configuration required")
@@ -59,12 +60,21 @@ def main() -> None:
         "run_id": args.run_id,
         "prefix_channels": True,
         "youtube_audio": True,
+        "natural_parser_version": "v2" if args.parser_v2 else "v1",
+        "parser_llm_fallback": "disabled",
     }
     controller = "/opt/changgeun-dev/source/scripts/profile_control.py"
     payload = json.dumps(plan).encode()
     ssh(args.ssh_config, "DiscordBotLXC", ["python3", controller, "prepare", "bot"], payload)
     # Probe gateway TLS/binding from the bot before interrupting the running bot.
     ssh(args.ssh_config, "DiscordBotLXC", ["python3", controller, "ready", "bot"], payload)
+    backup = "/etc/systemd/system/changgeun-dev-bot.service.before-" + args.candidate
+    ssh(args.ssh_config, "DiscordBotLXC", ["test", "!", "-e", backup])
+    ssh(
+        args.ssh_config,
+        "DiscordBotLXC",
+        ["cp", "-p", "/etc/systemd/system/changgeun-dev-bot.service", backup],
+    )
     try:
         ssh(args.ssh_config, "DiscordBotLXC", ["python3", controller, "stop", "bot"], payload)
         ssh(args.ssh_config, "DiscordBotLXC", ["python3", controller, "ready", "bot"], payload)
@@ -79,6 +89,9 @@ def main() -> None:
                 "candidate": args.candidate,
                 "run_id": args.run_id,
                 "gateway": "unchanged; ledger/budget retained",
+                "parser_version": "v2" if args.parser_v2 else "v1",
+                "llm_profile": "disabled",
+                "prior_unit": backup,
                 "formal_release": False,
             }
         )
