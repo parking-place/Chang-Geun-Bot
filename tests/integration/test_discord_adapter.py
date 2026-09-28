@@ -6,8 +6,14 @@ import discord
 import pytest
 
 from changgeun.config import BotConfig
-from changgeun.discord_adapter.client import ChangGeunClient, ConfirmationView, PlaybackView
-from changgeun.domain.models import Action, Actor, Policy
+from changgeun.discord_adapter.client import (
+    ChangGeunClient,
+    ConfirmationView,
+    PlaybackView,
+    help_text,
+    natural_failure,
+)
+from changgeun.domain.models import Action, Actor, DomainError, Policy
 from changgeun.providers.media import ApprovedAudioResolver
 
 
@@ -68,6 +74,46 @@ def client(tmp_path):
 
     bot.fresh_actor = fresh
     return bot
+
+
+def test_role_and_channel_help_does_not_expose_management_or_other_channels(client):
+    policy = client.config.policy
+    guest = Actor("1", "10", frozenset(), "3", None, None)
+    dj = replace(guest, role_ids=frozenset({"2"}))
+    admin = replace(guest, manage_guild=True)
+    assert "/곡제안" in help_text(
+        guest, policy, youtube_audio=False, prefix_enabled=True, watched_here=False
+    )
+    assert "/주시" not in help_text(
+        guest, policy, youtube_audio=False, prefix_enabled=True, watched_here=False
+    )
+    assert "/재생" in help_text(
+        dj, policy, youtube_audio=False, prefix_enabled=True, watched_here=True
+    )
+    assert "!!창근아" in help_text(
+        dj, policy, youtube_audio=False, prefix_enabled=True, watched_here=True
+    )
+    assert "/주시 목록" in help_text(
+        admin, policy, youtube_audio=False, prefix_enabled=True, watched_here=False
+    )
+    assert "/주시" not in help_text(
+        None, policy, youtube_audio=False, prefix_enabled=True, watched_here=True
+    )
+    assert "/주시" not in help_text(
+        replace(admin, text_channel_id="9"),
+        policy,
+        youtube_audio=False,
+        prefix_enabled=True,
+        watched_here=True,
+    )
+
+
+def test_natural_error_is_bounded_and_does_not_echo_upstream_body():
+    assert natural_failure(DomainError("dj_required"))[0] == "permission"
+    assert natural_failure(DomainError("watch_request_revoked"))[0] == "revoked"
+    category, message = natural_failure(RuntimeError("secret value and user message"))
+    assert category == "unknown"
+    assert "secret" not in message and "user message" not in message
 
 
 @pytest.mark.asyncio

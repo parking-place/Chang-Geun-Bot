@@ -24,6 +24,7 @@ from changgeun.domain.models import (
     authorize,
     normalized_name,
 )
+from changgeun.observability import Metrics
 from changgeun.providers.media import youtube_id
 from changgeun.storage.database import Database
 
@@ -156,8 +157,10 @@ class Pipeline:
         self.confidence, self.margin, self.prompt_version = confidence, margin, prompt_version
         self.context = context or ContextCache()
         self.cooldowns: dict[tuple[str, str, str], float] = {}
+        self.metrics = Metrics()
 
     def _snapshot(self, guild: str) -> dict[str, Any]:
+        observed_at = time.monotonic()
         conn = self.db.connect()
         try:
             conn.execute("BEGIN")
@@ -193,6 +196,7 @@ class Pipeline:
             }
         finally:
             conn.close()
+            self.metrics.duration("snapshot", time.monotonic() - observed_at)
 
     def _plan(
         self,
@@ -460,6 +464,39 @@ class Pipeline:
         refresh_actor: Callable[[], Awaitable[Actor]] | None = None,
         request_id: str | None = None,
     ) -> ActionPlan | None:
+        observed_at = time.monotonic()
+        try:
+            result = await self._interpret_impl(
+                text,
+                actor,
+                started_at=started_at,
+                refresh_actor=refresh_actor,
+                request_id=request_id,
+            )
+        except asyncio.CancelledError:
+            self.metrics.outcome("cancelled")
+            raise
+        except DomainError:
+            self.metrics.outcome("rejected")
+            raise
+        except Exception:
+            self.metrics.outcome("failed")
+            raise
+        else:
+            self.metrics.outcome("selected" if result else "clarified")
+            return result
+        finally:
+            self.metrics.duration("request", time.monotonic() - observed_at)
+
+    async def _interpret_impl(
+        self,
+        text: str,
+        actor: Actor,
+        *,
+        started_at: float | None = None,
+        refresh_actor: Callable[[], Awaitable[Actor]] | None = None,
+        request_id: str | None = None,
+    ) -> ActionPlan | None:
         request_id = request_id or str(uuid.uuid4())
         proven_request = request_id
 
@@ -545,9 +582,13 @@ class Pipeline:
                 ],
                 "prompt_version": self.prompt_version,
             }
-            result = await asyncio.wait_for(
-                self.port.choose(payload, min(4, remaining)), min(4, remaining)
-            )
+            decision_started = time.monotonic()
+            try:
+                result = await asyncio.wait_for(
+                    self.port.choose(payload, min(4, remaining)), min(4, remaining)
+                )
+            finally:
+                self.metrics.duration("decision", time.monotonic() - decision_started)
             request_policy()  # Each dispatch rechecks the durable source/generation.
             if (self.port.provider, self.port.profile_id, self.port.config_hash) != self.binding:
                 raise DomainError("inference_profile_mismatch")
@@ -596,7 +637,9 @@ class Pipeline:
         if permission_action is None:
             return None
         authorize(
-            self._plan(actor, request_id, snapshot, permission_action, {}), actor, self.policy
+            self._plan(actor, request_id, snapshot, permission_action, {}),
+            actor,
+            request_policy(),
         )
         second = await choose(2, [c.choice for c in candidates], {})
         if second == "clarify":

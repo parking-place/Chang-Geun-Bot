@@ -6,6 +6,8 @@
 
 > 2026-09-28 사용자 지시로 OpenJevLXC 사용을 종료했다. 현재 봇과 Jev API 중계는 DiscordBotLXC에서 별도 계정으로 실행한다. [결정0008](../docs/decisions/0008-single-lxc-jev-api.md)과 [환경](0.DevPhase/ENVIRONMENT.md)이 현재 배치에 우선하며 아래 두 LXC 설계는 기존 기준선 기록이다.
 
+> 2026-09-28 요청한1.1.0~1.1.7 후속 계획은 [PatchPhase 로드맵](1.PatchPhase/README.md)과 [공통 계약](1.PatchPhase/EXECUTION_RULES.md)을 따른다. 기능9·최적화9·안정화8개를 전부 배정했다. 1.1.0은 개발 후보·부분 시험 진행 중이고 후속 버전은 PLANNED다. 이 명세의 기존 기준선과 실행 성적을 소급 변경하지 않는다.
+
 > 한국어 자연어 명령을 지원하는 창팝 플레이리스트 디스코드 봇
 
 | 항목 | 내용 |

@@ -437,6 +437,104 @@ class Port:
 
 
 @pytest.mark.asyncio
+async def test_dynamic_channel_multicandidate_uses_proven_request_policy(env):
+    db, _, actor, policy, executor = env
+    for name in ("새벽 노동요", "새벽 작업곡"):
+        executor.execute(
+            ActionPlan(
+                str(uuid.uuid4()),
+                actor.guild_id,
+                actor.user_id,
+                Action.PLAYLIST_CREATE,
+                {"name": name},
+            ),
+            replace(actor, text_channel_id="20"),
+        )
+
+    class ChoosingPort:
+        provider, profile_id, config_hash = "mock", "test-mock", "a" * 64
+
+        def __init__(self):
+            self.calls = 0
+
+        async def choose(self, payload, timeout):
+            self.calls += 1
+            selected = "play_request" if payload["stage_index"] == 1 else "c1"
+            ids = [item["id"] for item in payload["candidates"]]
+            return Selection(
+                selected,
+                {item: 0.99 if item == selected else 0.01 / (len(ids) - 1) for item in ids},
+                self.calls,
+            )
+
+    port = ChoosingPort()
+    route = Pipeline(db, policy, port, confidence=0.7, margin=0.1, prompt_version="mock-v1")
+    request = MessageLedger(db).admit(
+        actor.guild_id,
+        actor.text_channel_id,
+        str(uuid.uuid4()),
+        actor.user_id,
+        "새벽 노동요 혹은 새벽 작업곡 재생해줘",
+        "a" * 64,
+        time.time(),
+    )
+    result = await route.interpret(
+        "새벽 노동요 혹은 새벽 작업곡 재생해줘", actor, request_id=request
+    )
+    assert result is not None and result.action == Action.PLAYLIST_PLAY
+    assert port.calls == 2
+
+
+@pytest.mark.asyncio
+async def test_multicandidate_watch_revocation_before_second_dispatch(env):
+    db, _, actor, policy, executor = env
+    for name in ("새벽 노동요", "새벽 작업곡"):
+        executor.execute(
+            ActionPlan(
+                str(uuid.uuid4()), actor.guild_id, actor.user_id,
+                Action.PLAYLIST_CREATE, {"name": name},
+            ),
+            replace(actor, text_channel_id="20"),
+        )
+
+    class ChoosingPort:
+        provider, profile_id, config_hash = "mock", "test-mock", "a" * 64
+
+        def __init__(self):
+            self.calls = 0
+
+        async def choose(self, payload, timeout):
+            self.calls += 1
+            ids = [item["id"] for item in payload["candidates"]]
+            selected = "play_request" if payload["stage_index"] == 1 else "c1"
+            return Selection(
+                selected,
+                {item: 0.99 if item == selected else 0.01 / (len(ids) - 1) for item in ids},
+                self.calls,
+            )
+
+    port = ChoosingPort()
+    route = Pipeline(db, policy, port, confidence=0.7, margin=0.1, prompt_version="mock-v1")
+    request = MessageLedger(db).admit(
+        actor.guild_id, actor.text_channel_id, str(uuid.uuid4()), actor.user_id,
+        "새벽 노동요 혹은 새벽 작업곡 재생해줘", "a" * 64, time.time(),
+    )
+
+    async def revoke():
+        change(env, "remove", actor.text_channel_id)
+        return actor
+
+    with pytest.raises(DomainError, match="watch_request_revoked"):
+        await route.interpret(
+            "새벽 노동요 혹은 새벽 작업곡 재생해줘",
+            actor,
+            request_id=request,
+            refresh_actor=revoke,
+        )
+    assert port.calls == 1
+
+
+@pytest.mark.asyncio
 async def test_inference_result_after_revocation_never_commits_or_dispatches_again(env):
     port = Port(env)
     pipeline = Pipeline(env[0], env[3], port, confidence=0.7, margin=0.1, prompt_version="mock-v1")

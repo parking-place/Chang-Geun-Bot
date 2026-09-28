@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ssl
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -11,6 +12,7 @@ import httpx
 
 from changgeun.domain.models import DomainError
 from changgeun.nlp.pipeline import Selection
+from changgeun.observability import Metrics
 
 
 class GatewayClient:
@@ -29,8 +31,16 @@ class GatewayClient:
             raise ValueError("verified internal HTTPS endpoint required")
         self.token = Path(config["token_file"]).read_text().strip()
         self.tls = ssl.create_default_context(cafile=str(config["ca_file"]))
+        self.metrics = Metrics()
 
     async def ready(self) -> None:
+        observed_at = time.monotonic()
+        try:
+            await self._ready()
+        finally:
+            self.metrics.duration("gateway_ready", time.monotonic() - observed_at)
+
+    async def _ready(self) -> None:
         async with httpx.AsyncClient(
             transport=self.transport,
             verify=self.tls,
@@ -51,6 +61,16 @@ class GatewayClient:
             raise DomainError("inference_profile_mismatch")
 
     async def choose(self, payload: dict[str, Any], timeout: float) -> Selection:
+        observed_at = time.monotonic()
+        try:
+            return await self._choose(payload, timeout)
+        except BaseException:
+            self.metrics.outcome("unknown_call")
+            raise
+        finally:
+            self.metrics.duration("gateway_choose", time.monotonic() - observed_at)
+
+    async def _choose(self, payload: dict[str, Any], timeout: float) -> Selection:
         async with httpx.AsyncClient(
             transport=self.transport,
             verify=self.tls,
@@ -104,4 +124,5 @@ class GatewayClient:
                 or usage.get("forward_passes_source") != "unavailable"
             ):
                 raise DomainError("inference_forward_provenance_mismatch")
+        self.metrics.outcome("new_call" if new_calls == 1 else "reused_call")
         return Selection(result["selected_id"], result["probabilities"], total)

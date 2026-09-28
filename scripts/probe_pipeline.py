@@ -191,6 +191,7 @@ async def run(config_path: Path, dataset: Path | None = None, output: Path | Non
                     "error_type": error,
                     "elapsed_ms": round((time.monotonic() - started) * 1000),
                     "trace": port.trace,
+                    "pipeline_metrics": pipeline.metrics.snapshot(),
                 }
             )
         report = {
@@ -206,6 +207,7 @@ async def run(config_path: Path, dataset: Path | None = None, output: Path | Non
             "unsafe_plans": sum(
                 row["actual"] is not None for row in results if row["expected"] is None
             ),
+            "gateway_metrics": client.metrics.snapshot(),
         }
         if output is not None:
             with output.open("x") as stream:

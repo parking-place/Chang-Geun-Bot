@@ -10,10 +10,12 @@ import random
 import re
 import sqlite3
 import time
+from collections import Counter
 from dataclasses import replace
 from typing import Any
 
 import discord
+import httpx
 from discord import app_commands
 
 from changgeun.application import undo
@@ -38,6 +40,7 @@ from changgeun.domain.models import (
     ActionPlan,
     Actor,
     DomainError,
+    Policy,
     normalized_name,
 )
 from changgeun.nlp.client import GatewayClient
@@ -93,6 +96,87 @@ ERRORS = {
 
 def safe(value: str) -> str:
     return discord.utils.escape_mentions(discord.utils.escape_markdown(value))
+
+
+def natural_failure(exc: Exception) -> tuple[str, str]:
+    """Return a bounded category and safe next action, never an upstream body."""
+    if isinstance(exc, DomainError):
+        code = exc.code
+        if code in {"guild_not_allowed", "text_channel_not_allowed", "watch_unavailable"}:
+            return "channel", "이 채널에서는 사용할 수 없어. 허용된 채널이나 /도움말을 확인해줘."
+        if code in {
+            "dj_required",
+            "same_voice_required",
+            "voice_channel_not_allowed",
+            "permissions_unavailable",
+        }:
+            return "permission", ERRORS.get(code, "권한과 음성채널을 확인한 뒤 다시 요청해줘.")
+        if code in {
+            "watch_request_revoked",
+            "message_request_cancelled",
+            "execution_generation_conflict",
+        }:
+            return (
+                "revoked",
+                "요청 중 상태가 바뀌어 실행하지 않았어. 현재 상태를 확인하고 새로 요청해줘.",
+            )
+        if code in {"user_cooldown", "inference_deadline", "execution_deadline_expired"}:
+            return (
+                "deadline",
+                "요청을 제때 완료하지 못했어. 잠시 뒤 새로 요청하거나 슬래시 명령을 사용해줘.",
+            )
+        if code in {
+            "inference_profile_mismatch",
+            "inference_response_binding_mismatch",
+            "inference_usage_mismatch",
+            "inference_forward_provenance_mismatch",
+            "invalid_inference_response",
+            "inference_response_too_large",
+        }:
+            return "gateway", "자연어 판단을 안전하게 확인하지 못했어. 슬래시 명령을 사용해줘."
+        return "invalid", "요청을 실행하지 않았어. 대상과 현재 상태를 확인해줘."
+    if isinstance(exc, httpx.HTTPStatusError):
+        if exc.response.status_code == 429:
+            return "busy", "자연어 요청이 혼잡해. 잠시 뒤 새로 요청하거나 슬래시 명령을 사용해줘."
+        return "gateway", "자연어 연결을 사용할 수 없어. 슬래시 명령을 사용해줘."
+    if isinstance(exc, (TimeoutError, httpx.RequestError)):
+        return "gateway", "자연어 연결이 지연되거나 끊겼어. 슬래시 명령을 사용해줘."
+    return "unknown", "자연어 요청을 완료하지 못했어. 슬래시 명령을 사용해줘."
+
+
+def help_text(
+    actor: Actor | None,
+    policy: Policy,
+    *,
+    youtube_audio: bool,
+    prefix_enabled: bool,
+    watched_here: bool,
+) -> str:
+    """Render only the commands and watch state visible from this channel."""
+    if actor is None or actor.text_channel_id not in policy.text_channel_ids:
+        return "이 채널에서는 사용법만 안내할게. 허용된 채널에서 /도움말을 다시 열어줘."
+    lines = ["목록은 /목록 보기, 등록 곡은 /검색에서 확인할 수 있어."]
+    if actor.role_ids & policy.dj_role_ids or policy.admin_dj_override and actor.manage_guild:
+        lines.append("DJ는 /목록 생성 → /곡 등록 → /곡 추가로 목록을 만들고 /재생으로 틀 수 있어.")
+    else:
+        lines.append("곡을 추천하려면 /곡제안을 사용해줘. 재생·편집은 DJ에게 요청해줘.")
+    if youtube_audio:
+        lines.append(
+            "공개 YouTube 영상(30분 이하)은 /재생 곡:링크로 틀 수 있어. https://는 생략해도 돼."
+        )
+    else:
+        lines.append("YouTube 링크는 참조 저장, 음성 재생은 승인 음원을 지원해.")
+    lines.append("자연어는 /부탁으로 한 가지 동작을 요청할 수 있어.")
+    if prefix_enabled and watched_here:
+        lines.append("이 채널에서는 ‘!!창근아 목록 보여줘’처럼 말해줘.")
+    elif prefix_enabled:
+        lines.append("이 채널의 접두어 주시는 켜져 있지 않아.")
+    if actor.manage_guild:
+        lines.append(
+            "서버 관리자는 /주시 목록·점검으로 상태를 확인하고 "
+            "/주시 추가·제거·켜기·끄기로 관리할 수 있어."
+        )
+    return "\n".join(lines)
 
 
 class ConfirmationView(discord.ui.View):
@@ -247,6 +331,7 @@ class ChangGeunClient(discord.Client):
         self.message_cooldowns: dict[tuple[str, str], float] = {}
         self.prefix_ready = False
         self.prefix_status = "disabled"
+        self.natural_failures: Counter[str] = Counter()
         self.tree = app_commands.CommandTree(self)
         self.audio = AudioRuntime(
             self,
@@ -1136,23 +1221,30 @@ class ChangGeunClient(discord.Client):
 
         @tree.command(name="도움말", description="창근이 사용법과 현재 지원 범위")
         async def help_command(interaction: discord.Interaction) -> None:
-            source_help = (
-                "공개 YouTube 영상(30분 이하)은 /재생 곡:링크로 틀 수 있어.\n"
-                "YouTube 주소의 https://는 생략해도 돼.\n"
-                if self.config.youtube_audio_enabled
-                else "현재 YouTube 링크는 참조 저장, 음성 재생은 승인 음원을 지원해.\n"
-            )
-            prefix_help = (
-                "지정한 채팅 채널에서는 ‘!!창근아 목록 보여줘’처럼 말해줘.\n"
-                if self.config.prefix.enabled
-                else ""
-            )
+            actor: Actor | None = None
+            watched_here = False
+            if (
+                interaction.guild_id is not None
+                and str(interaction.channel_id) in self.config.policy.text_channel_ids
+            ):
+                try:
+                    actor = await self.fresh_actor(interaction)
+                    state = self.watch.state(actor.guild_id)
+                    watched_here = bool(
+                        self.config.prefix.enabled
+                        and state["enabled"]
+                        and actor.text_channel_id in self.watch.channels(actor.guild_id)
+                    )
+                except DomainError:
+                    pass
             await interaction.response.send_message(
-                "DJ는 /목록 생성 → /곡 등록 → /곡 추가로 목록을 만들 수 있어.\n"
-                "/재생으로 곡·목록을 골라줘.\n"
-                + source_help
-                + prefix_help
-                + "자연어는 /부탁으로도 사용할 수 있어.",
+                help_text(
+                    actor,
+                    self.config.policy,
+                    youtube_audio=self.config.youtube_audio_enabled,
+                    prefix_enabled=self.config.prefix.enabled,
+                    watched_here=watched_here,
+                ),
                 ephemeral=True,
             )
 
@@ -1676,10 +1768,10 @@ class ChangGeunClient(discord.Client):
                 return
             actor = await self.fresh_actor(interaction)
             await self.submit_plan(interaction, plan, actor=actor)
-        except Exception:
-            await interaction.followup.send(
-                "자연어 요청을 실행하지 않았어. /목록이나 /재생으로 조작해줘.", ephemeral=True
-            )
+        except Exception as exc:
+            category, message = natural_failure(exc)
+            self.natural_failures[category] += 1
+            await interaction.followup.send(message, ephemeral=True)
 
     async def on_message(self, message: discord.Message) -> None:
         if (

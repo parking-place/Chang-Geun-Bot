@@ -110,6 +110,16 @@ async def test_ambiguous_candidate_requires_second_stage(env):
     assert plan.action == Action.PLAYLIST_PLAY
     assert len(port.requests) == 2
     assert port.requests[0]["request_id"] == port.requests[1]["request_id"]
+    metrics = route.metrics.snapshot()
+    assert metrics["outcomes"] == {"selected": 1}
+    assert (
+        sum(value for key, value in metrics["durations_ms"].items() if key.startswith("decision:"))
+        == 2
+    )
+    assert (
+        sum(value for key, value in metrics["durations_ms"].items() if key.startswith("request:"))
+        == 1
+    )
 
 
 @pytest.mark.asyncio
@@ -256,14 +266,17 @@ async def test_classifier_sees_validated_action_data_without_discord_identifiers
     assert not any(key in context for key in ("guild_id", "user_id", "role_ids", "channel_id"))
 
 
-@pytest.mark.parametrize("url", [
-    "youtube.com/watch?v=GD_rjpO7CIQ",
-    "https://www.youtube.com/watch?v=GD_rjpO7CIQ",
-    "www.youtube.com/watch?v=GD_rjpO7CIQ",
-    "m.youtube.com/watch?v=GD_rjpO7CIQ",
-    "youtu.be/GD_rjpO7CIQ",
-    "youtube.com/shorts/GD_rjpO7CIQ",
-])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "youtube.com/watch?v=GD_rjpO7CIQ",
+        "https://www.youtube.com/watch?v=GD_rjpO7CIQ",
+        "www.youtube.com/watch?v=GD_rjpO7CIQ",
+        "m.youtube.com/watch?v=GD_rjpO7CIQ",
+        "youtu.be/GD_rjpO7CIQ",
+        "youtube.com/shorts/GD_rjpO7CIQ",
+    ],
+)
 @pytest.mark.asyncio
 async def test_explicit_youtube_link_preserves_id_and_precedes_named_playlist(env, url):
     route, port = pipeline(env, ["play_request"])
@@ -273,12 +286,15 @@ async def test_explicit_youtube_link_preserves_id_and_precedes_named_playlist(en
     assert len(port.requests) == 1
 
 
-@pytest.mark.parametrize("text", [
-    "youtube.com/watch?v=GD_rjpO7CIQ 틀지 말아줘",
-    "새벽 노동요 youtube.com/watch?v=GD_rjpO7CIQ https://youtu.be/ABCDEFGHIJK 틀어줘",
-    "https://example.com/youtube.com/watch?v=GD_rjpO7CIQ 틀어줘",
-    "user@youtube.com/watch?v=GD_rjpO7CIQ 틀어줘",
-])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "youtube.com/watch?v=GD_rjpO7CIQ 틀지 말아줘",
+        "새벽 노동요 youtube.com/watch?v=GD_rjpO7CIQ https://youtu.be/ABCDEFGHIJK 틀어줘",
+        "https://example.com/youtube.com/watch?v=GD_rjpO7CIQ 틀어줘",
+        "user@youtube.com/watch?v=GD_rjpO7CIQ 틀어줘",
+    ],
+)
 @pytest.mark.asyncio
 async def test_negated_ambiguous_or_embedded_links_never_dispatch(env, text):
     route, port = pipeline(env, [])

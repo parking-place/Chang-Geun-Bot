@@ -18,6 +18,7 @@
 
 - [개발 명세 1.3](Plans/CHANGGEUN_DEVELOPMENT_SPEC_v1.3.md)
 - [0.0.0 → 1.0.3 버전별 계획](Plans/0.DevPhase/README.md)
+- [1.1.0 → 1.1.7 계획: 기능·Jev 최적화·안정화](Plans/1.PatchPhase/README.md)
 - [현재 진행 현황](Plans/0.DevPhase/STATUS.md)
 - [Jev API 전용 계약](Plans/0.DevPhase/INFERENCE_PROFILES.md)
 - [개발·검증 환경](Plans/0.DevPhase/ENVIRONMENT.md)
@@ -27,7 +28,7 @@
 
 ```text
 .
-├── Plans/          # 원본 명세, 14개 버전·70단계 계획, 시험/출시 기준
+├── Plans/          # 명세·기존 버전 계획·1.PatchPhase 후속 검토 자료
 ├── bot/            # Discord·도메인·SQLite·재생 패키지
 ├── inference/      # 공통 게이트웨이·제공자 어댑터 패키지
 ├── shared/         # 공통 API 1.2 요청·응답 JSON Schema

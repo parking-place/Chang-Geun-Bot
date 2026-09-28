@@ -70,3 +70,5 @@
 앞서 후속 작업으로 남긴 채널 설정 명령을 [결정0007](../../docs/decisions/0007-watch-channel-management.md)과 [1.0.3의5단계](1.0.3/README.md)로 구체화했다. 관리자용 `/주시`6명령은 Jev0회이며 정적 음악 명령 채널과 동적 prefix 정책을 분리한다. 사용자 구현 요청으로 1.0.3은 IN_PROGRESS다. [관리 명령·영속 정책·자동 회귀 증거](../../evidence/public/watch-channels-20260928.md)를 추가했고 전체 W 실제 인수는 남아 있다. 이전 버전 인수 상태를 유지하고 정식 승격은 1.0.0 → 1.0.1 → 1.0.2 → 1.0.3 순서를 따른다.
 
 2026-09-28부터 OpenJevLXC에 새 작업을 수행하지 않는다. 현재 실행 위치는 [환경 계약](ENVIRONMENT.md)과 [결정0008](../../docs/decisions/0008-single-lxc-jev-api.md)이 우선한다.
+
+추가 기능·Jev 최적화·안정화26개 전체의 [1.1.0~1.1.7 계획](../1.PatchPhase/README.md)은 `1.PatchPhase`에 둔다. 1.1.0 개발 후보·부분 시험 진행 중이고 후속 버전은 PLANNED다. 기존 버전 상태나 출시 인수를 소급 변경하지 않는다.
