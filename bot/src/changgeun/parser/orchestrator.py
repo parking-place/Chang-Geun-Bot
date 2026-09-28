@@ -74,10 +74,11 @@ class ParserOrchestrator:
         self, interpreter: JevInterpreter, model: ModelPort,
         commands: CommandService, db: Database, policy: Policy, *,
         llm_enabled: bool, fallback_on_jev_unavailable: bool = False,
-        trace: TracePort | None = None,
+        trace: TracePort | None = None, attachments: tuple[Any, ...] = (),
     ) -> None:
         self.interpreter, self.model, self.commands = interpreter, model, commands
         self.db, self.policy, self.trace = db, policy, trace
+        self.attachments = attachments
         self.llm_enabled = llm_enabled
         self.fallback_on_jev_unavailable = fallback_on_jev_unavailable
         self.rewrite_validator = RewritePolicyValidator()
@@ -221,6 +222,7 @@ class ParserOrchestrator:
                             spec, argument, actor, self.policy, self.db,
                             root_id=root_id, pass_id="full_parse",
                             scope_hash=scope_hash, guild=guild, member=member,
+                            attachments=self.attachments,
                         )
                         selected_snapshot = collections[(identifier, argument.name)]
                         self.snapshots[selected_snapshot.snapshot_id] = selected_snapshot
@@ -234,7 +236,7 @@ class ParserOrchestrator:
                  "scope": scope,
                  "allowed_commands": {key: spec.description for key, spec in selected.items()},
                  "collections": {f"{key[0]}:{key[1]}": item.criteria()
-                                 for key, item in collections.items()}}
+                                 for key, item in collections.items() if item.selections}}
         try:
             output = await self.model.call("full_parse", state, output_schema=schema)
             self._check(expires_at)

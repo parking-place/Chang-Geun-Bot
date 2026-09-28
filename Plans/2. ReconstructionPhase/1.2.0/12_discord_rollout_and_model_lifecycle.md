@@ -1,6 +1,6 @@
 # 12 — Discord 단계 적용과 모델 수명 관리
 
-- 상태: **IN_PROGRESS — p12e gateway 후보는 Jev v2/LLM disabled로 적용, 제한 GPT 시험 후 복구. 새 bot 적용·실제 인수·정식 출시는 NOT_RUN**
+- 상태: **IN_PROGRESS — p12e gateway는 Jev v2/LLM disabled, p12f bot wheel은 격리 검증만 완료. 새 bot 적용·실제 인수·정식 출시는 NOT_RUN**
 - 책임: R120-31~33. 선행: [11 LXC 평가·이관](11_lxc_evaluation_and_migration.md)의 같은 후보 필수 게이트.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12.3·13·15.15·15.16.
 - 배포·검증 위치: DiscordBotLXC의 별도 bot/gateway 계정과 loopback TLS 경계 유지.
@@ -52,6 +52,8 @@ p12c 후보는 v2 opt-in 설정에 독립 trace 경로를 필수로 묶고 최�
 p12d에서는 gateway의 v2 경로만 `LLM_FALLBACK=disabled`로 적용했다. 기존 v1 health·TLS·공유 원장과 봇 서비스를 유지한 채 합성2문장에 대해 Jev `/v2/parse` 실제 응답을 확인했다. 봇은 아직 구 경로를 사용하며, 이 결과는 새 Discord 경로 인수가 아니다. [실행 기록](../../../evidence/public/reconstruction-120-progress.md)을 참조한다.
 
 p12e에서는 GPT 프로필을 제한 합성시험 동안만 켰다. 기본 reasoning 호출의 불완료 원인을 사용량으로 확인하고 `minimal`을 적용한 새 gateway 후보에서 rewrite/full_parse 각각 완성을 확인했다. 요청별 단회 호출, 영속 비용 예약/실제 정산, disabled 복귀를 확인했다. 실제 봇 v2 설정은 아직 켜지 않았다.
+
+p12f에서는 자연어 첨부 인수에 현재 메시지의 실제 첨부 목록과 재검증을 연결하고 새 bot wheel `recon120p12fbot`을 격리 빌드·회귀 시험했다. bot 서비스는 계속 이전 후보이므로 실제 첨부 가져오기 인수가 아니다.
 
 | 상황 | 전환 정책과 필수 근거 |
 | --- | --- |

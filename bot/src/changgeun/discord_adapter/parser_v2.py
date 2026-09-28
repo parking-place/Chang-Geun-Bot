@@ -250,12 +250,20 @@ class ParserV2Bridge:
         ).hexdigest()
         session = ParserSession(client.gateway, request_id=request_id,
                                 scope_hash=scope_hash, original_text=text, trace=trace)
+        attachments: tuple[Any, ...] = ()
+        if isinstance(source, MentionEntry):
+            message = source.message
+            if (message.guild is None or str(message.guild.id) != actor.guild_id
+                    or str(message.channel.id) != actor.text_channel_id
+                    or str(message.author.id) != actor.user_id):
+                raise ParseError("attachment_source_mismatch")
+            attachments = tuple(message.attachments)
         interpreter = JevInterpreter(client.command_service, session, client.db,
-                                     client.config.policy)
+                                     client.config.policy, attachments=attachments)
         orchestrator = ParserOrchestrator(
             interpreter, session, client.command_service, client.db, client.config.policy,
             llm_enabled=client.config.parser_llm_fallback == "gpt-5-nano",
-            trace=trace,
+            trace=trace, attachments=attachments,
         )
         guild = source.guild
         if guild is None:
@@ -285,7 +293,8 @@ class ParserV2Bridge:
                 else _DeferredEntry(source)
             )
             validator = DraftValidator(client.command_service, client.db,
-                                       client.config.policy, orchestrator.snapshots)
+                                       client.config.policy, orchestrator.snapshots,
+                                       attachments=attachments)
             context = _TypedContext(source, typed_entry, view, request_id, pass_id,
                                     scope_hash, validator, guild, actor.user_id,
                                     actor.text_channel_id)
@@ -323,7 +332,8 @@ class ParserV2Bridge:
                    else "full_parse" if draft.parser_source == "llm_full_parse"
                    else "initial")
         validator = DraftValidator(client.command_service, client.db,
-                                   client.config.policy, orchestrator.snapshots)
+                                   client.config.policy, orchestrator.snapshots,
+                                   attachments=attachments)
         checked = validator.validate(
             draft, view, actor, root_id=request_id, pass_id=pass_id,
             scope_hash=scope_hash, watch_allowed=True, guild=guild, member=member,

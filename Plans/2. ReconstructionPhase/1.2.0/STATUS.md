@@ -1,8 +1,8 @@
 # 1.2.0 진행 상태
 
-- 전체: **IN_PROGRESS — p12e GPT-5 nano 제한 실호출·복구까지 진행**
+- 전체: **IN_PROGRESS — p12f 첨부 목록 경계와 새 bot wheel 회귀까지 진행**
 - 재개 기록: [HANDOFF](HANDOFF.md). p1·p2 체크포인트 뒤 중단한 상태를 보존하고 재개했다.
-- 제품 구현/검증: p1~p12c 후보 회귀와 p12d/e gateway Jev·GPT 제한 합성호출을 기록했다. 전체인수 미완료. GPT 실제 누적 US$0.000521/예약 US$0.002005, 검증 상한 US$1.
+- 제품 구현/검증: p1~p12f 후보 회귀와 p12d/e gateway Jev·GPT 제한 합성호출을 기록했다. 전체인수 미완료. GPT 실제 누적 US$0.000521/예약 US$0.002005, 검증 상한 US$1.
 - 현재 산출물: 사용자 명세와 목록 전달 추가 지시를 반영한12단계 계획·아키텍처·요구 배정·시험표.
 - 계획 작성 기준SHA: `474dad904466f0cce0817f7ac2527e4b86d9264c`.
 - 원본 명세 SHA256: `70bc3e9b63fbbd3b6b52589289852a7aac123baa139e57487e0d58be071f3a2c`.
@@ -14,15 +14,15 @@
 | 01 | [기준선·계약](01_baseline_and_contracts.md) | IN_PROGRESS | [p1 실행](../../../evidence/public/reconstruction-120-progress.md) | 계약3시험PASS; 전수대응은p2와연결 |
 | 02 | [등록부·서비스](02_registry_and_command_service.md) | IN_PROGRESS | [p2 실행](../../../evidence/public/reconstruction-120-progress.md) |47개등록부·45회귀PASS, 신규연결p9 |
 | 03 | [정규화·원문](03_normalizer_and_provenance.md) | IN_PROGRESS | [p3 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC 단위10 PASS | 새 Discord 경로와 원문값 검증 연결은p4/p9 |
-| 04 | [실제 목록·새 값](04_typed_candidates_and_resolution.md) | IN_PROGRESS | [p4 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC 6 PASS | 전체 collection/실행 직전 재검증·p6 연결 |
+| 04 | [실제 목록·새 값](04_typed_candidates_and_resolution.md) | IN_PROGRESS | [p4·p12f 실행](../../../evidence/public/reconstruction-120-progress.md) / 첨부 실제목록/재검증 포함 | 전체 collection·복수선택/실제 Discord 인수 미완료 |
 | 05 | [gateway·예산](05_gateway_budget_and_api_migration.md) | IN_PROGRESS | [p5 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC 25 PASS | 실제 provider 비용상한·운영 연결·중단/원장장애 검증 |
 | 06 | [Jev 두 패스](06_jev_interpreter.md) | IN_PROGRESS | [p6 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock8 PASS | 실제Jev 품질·복수선택/전체인수 |
 | 07 | [LLM 프로필](07_llm_provider_profiles.md) | IN_PROGRESS | [p7·p12e 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock13 PASS·GPT 합성3호출 | 실제 rewrite/full_parse 제한계약·실비 확인; 전수품질/계정운영 미완료 |
 | 08 | [복구 전이](08_rewrite_and_fallback_orchestration.md) | IN_PROGRESS | [p8 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC14 PASS | 실제통합 전이·후보/의미 검증 |
-| 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | IN_PROGRESS | [p9·p12a/b 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 읽기·한 인수 typed·단회확인 대역PASS | 다중/의존인수·전체명령/후속·실제권한/확인 미완료 |
+| 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | IN_PROGRESS | [p9·p12a/b/f 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 읽기·한 인수 typed·단회확인·첨부 재검증 대역PASS | 다중/의존인수·전체명령/후속·실제권한/확인 미완료 |
 | 10 | [로그·보관](10_structured_logs_and_retention.md) | IN_PROGRESS | [p10·p12c 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 opt-in 최소관측 대역PASS | bounded writer·이관/보관사본·관리자 조회 미완료 |
-| 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | IN_PROGRESS | [p11·p12d/e 실행](../../../evidence/public/reconstruction-120-progress.md) / source·새 gateway wheel 각486 PASS; 실제 Jev/GPT 합성호출 | 독립221·전체옵션·격리이관/복귀 NOT_RUN |
-| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12~p12e 준비](../../../evidence/public/reconstruction-120-progress.md) / gateway v2/LLM disabled 적용; GPT 제한시험 뒤 복구 | p11 게이트·전수·새 bot 실제 Discord 인수 NOT_RUN |
+| 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | IN_PROGRESS | [p11·p12d/e/f 실행](../../../evidence/public/reconstruction-120-progress.md) / source·새 bot/gateway wheel 각489 PASS; 실제 Jev/GPT 합성호출 | 독립221·전체옵션·격리이관/복귀 NOT_RUN |
+| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12~p12f 준비](../../../evidence/public/reconstruction-120-progress.md) / 새 bot wheel 미적용; gateway v2/LLM disabled | p11 게이트·전수·새 bot 실제 Discord 인수 NOT_RUN |
 
 ## 보존할 기준선과 이전 미완료
 

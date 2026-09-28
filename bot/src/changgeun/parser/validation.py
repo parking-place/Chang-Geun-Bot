@@ -41,8 +41,10 @@ class TrustedContext:
 
 class DraftValidator:
     def __init__(self, service: CommandService, db: Database, policy: Policy,
-                 snapshots: dict[str, CollectionSnapshot]) -> None:
+                 snapshots: dict[str, CollectionSnapshot], *,
+                 attachments: tuple[Any, ...] = ()) -> None:
         self.service, self.db, self.policy, self.snapshots = service, db, policy, snapshots
+        self.attachments = attachments
 
     def validate(
         self, draft: CommandDraft, view: NormalizedInput, actor: Actor, *,
@@ -140,12 +142,16 @@ class DraftValidator:
             mentioned = mentioned or any(candidate.value == expected
                                          for candidate in numbers(view))
         if not mentioned and trusted is None:
-            raise ParseError("collection_not_mentioned")
+            attached_here = (argument.collection == "attachments"
+                             and len(self.attachments) == 1
+                             and str(getattr(self.attachments[0], "id", "")) == selected.object_id)
+            if not attached_here:
+                raise ParseError("collection_not_mentioned")
         parent_id = values.get(argument.depends_on) if argument.depends_on else None
         current = resolve_collection(
             spec, argument, actor, self.policy, self.db, root_id=root_id,
             pass_id=pass_id, scope_hash=scope_hash, parent_id=parent_id,
-            guild=guild, member=member,
+            guild=guild, member=member, attachments=self.attachments,
         )
         if current.revision != snapshot.revision or selected.object_id not in {
             item.item.object_id for item in current.selections

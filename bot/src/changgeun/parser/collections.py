@@ -215,16 +215,34 @@ def discord_items(collection: str, guild: Any, member: Any,
     return result
 
 
+def attachment_items(attachments: tuple[Any, ...]) -> list[CollectionItem]:
+    """Only attachments from the admitted message; never expose their URLs."""
+    result = []
+    for attachment in attachments:
+        identifier = getattr(attachment, "id", None)
+        filename = getattr(attachment, "filename", None)
+        if not isinstance(identifier, int) or identifier <= 0 or not isinstance(filename, str):
+            raise ParseError("invalid_attachment")
+        result.append(CollectionItem(
+            str(identifier), filename or "첨부파일", "현재 요청 첨부파일",
+            version=str(getattr(attachment, "size", "")),
+        ))
+    return result
+
+
 def resolve_collection(
     spec: CommandSpec, argument: ArgumentSpec, actor: Actor, policy: Policy,
     db: Database, *, root_id: str, pass_id: str, scope_hash: str,
     parent_id: str | None = None, guild: Any = None, member: Any = None,
+    attachments: tuple[Any, ...] = (),
 ) -> CollectionSnapshot:
     if actor.guild_id not in policy.guild_ids or not spec.allowed(actor, policy):
         raise ParseError("command_not_allowed")
     if argument.collection is None:
         raise ParseError("unsupported_collection")
-    if argument.collection in {"text_channels", "voice_channels", "watched_channels"}:
+    if argument.collection == "attachments":
+        items = attachment_items(attachments)
+    elif argument.collection in {"text_channels", "voice_channels", "watched_channels"}:
         if guild is None or str(guild.id) != actor.guild_id:
             raise ParseError("collection_scope_required")
         items = discord_items(argument.collection, guild, member, policy)

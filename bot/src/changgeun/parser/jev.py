@@ -49,6 +49,8 @@ def _choice_set(spec: ArgumentSpec, view: NormalizedInput, *, snapshot: Collecti
                 ) -> _ChoiceSet:
     values: dict[str, tuple[Any, Evidence]] = {}
     if snapshot is not None:
+        if not snapshot.selections:
+            raise ParseError("missing_argument" if spec.required else "optional_unmentioned")
         criteria = snapshot.criteria()
         for selection in snapshot.selections:
             item = selection.item
@@ -95,8 +97,9 @@ def _choice_set(spec: ArgumentSpec, view: NormalizedInput, *, snapshot: Collecti
 
 class JevInterpreter:
     def __init__(self, commands: CommandService, model: ModelPort, db: Database,
-                 policy: Policy) -> None:
+                 policy: Policy, *, attachments: tuple[Any, ...] = ()) -> None:
         self.commands, self.model, self.db, self.policy = commands, model, db, policy
+        self.attachments = attachments
         self.snapshots: dict[str, CollectionSnapshot] = {}
 
     async def interpret(
@@ -184,7 +187,7 @@ class JevInterpreter:
                             pass_id=pass_id, scope_hash=scope_hash,
                             parent_id=(arguments[argument.depends_on]
                                        if argument.depends_on else None),
-                            guild=guild, member=member,
+                            guild=guild, member=member, attachments=self.attachments,
                         )
                         self.snapshots[collection.snapshot_id] = collection
                     except ParseError as exc:

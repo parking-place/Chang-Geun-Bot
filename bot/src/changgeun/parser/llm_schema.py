@@ -37,7 +37,11 @@ def _argument_schema(argument: ArgumentSpec,
                 raise ParseError("collection_required_for_llm")
             ids: list[str] = []  # Parent is not known until this parse completes.
         else:
-            if not collection.complete or not collection.selections:
+            if not collection.complete:
+                raise ParseError("collection_required_for_llm")
+            if not collection.selections:
+                if not argument.required:
+                    return {"type": "null"}
                 raise ParseError("collection_required_for_llm")
             ids = [selection.token for selection in collection.selections]
         return _nullable({

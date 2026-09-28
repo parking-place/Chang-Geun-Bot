@@ -1,6 +1,6 @@
 # 09. 공통 검증·typed 후속 입력·Discord 실행 연결
 
-상태: **IN_PROGRESS**. p9 개발 체크포인트의 검증기·단회 대기·typed 값 해석은 DiscordBotLXC mock 시험을 통과했다. Discord 진입점 연결·전수 인수·새 후보 적용은 미완료다.
+상태: **IN_PROGRESS**. p9 검증기·단회 대기와 p12a~f의 기본 비활성 Discord bridge·typed 모달·첨부 재검증이 DiscordBotLXC 대역/격리 시험을 통과했다. 실제 Discord 전수 인수와 새 bot 후보 적용은 미완료다.
 
 [버전 개요](README.md) · [아키텍처](ARCHITECTURE.md) · [시험 추적](TEST_MATRIX.md) · [실행 상태](STATUS.md)
 
