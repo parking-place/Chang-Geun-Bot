@@ -115,11 +115,11 @@ def test_100_requester_cancel_commit_races(env):
             assert request is not None
             barrier = Barrier(2)
 
-            def cancel():
+            def cancel(barrier=barrier, request=request):
                 barrier.wait()
                 return ledger.cancel_request("1", "20", request, "10")
 
-            def commit():
+            def commit(barrier=barrier, request=request, index=index):
                 barrier.wait()
                 try:
                     executor.execute(

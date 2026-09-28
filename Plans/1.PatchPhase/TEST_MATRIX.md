@@ -116,13 +116,13 @@ snapshot/버튼/승인 회귀와 실제 Discord 페이지·단건 재승인·현
 
 | ID | 시험 시나리오 | 결과 | 새 실행 증거 |
 | --- | --- | --- | --- |
-| P116-01 | 개발/held-out 분리와 잠금 변조 | NOT_RUN | — |
-| P116-02 | prompt 축약 기준/후보 비교 | NOT_RUN | — |
-| P116-03 | confidence/margin 비교 | NOT_RUN | — |
-| P116-04 | 독립 최소 200문장 Jev 평가 | NOT_RUN | — |
-| P116-05 | 권한·부정·주입·상태 경합 안전 | NOT_RUN | — |
-| P116-06 | 단계·usage·누적 예산 | NOT_RUN | — |
-| P116-07 | 선택 결과 재현·후보 복귀 | NOT_RUN | — |
+| P116-01 | 개발/held-out 분리와 잠금 변조 | PARTIAL — SHA·구성·중복 검사, 변조 주입 전 | [1.1.6 기록](../../evidence/public/patch-116-development-20260928.md) |
+| P116-02 | prompt 축약 기준/후보 비교 | PASS — 개발37/37 유지·실측 입력 token7.8% 감소; 운영 적용 전 | [1.1.6 기록](../../evidence/public/patch-116-development-20260928.md) |
+| P116-03 | confidence/margin 비교 | PASS — 대안 이득0, 0.80/0.10 기준 유지 | [1.1.6 기록](../../evidence/public/patch-116-development-20260928.md) |
+| P116-04 | 독립 최소 200문장 Jev 평가 | FAIL — 첫 잠금 명확103/120, 목표114/120 미달 | [1.1.6 기록](../../evidence/public/patch-116-development-20260928.md) |
+| P116-05 | 권한·부정·주입·상태 경합 안전 | FAIL/PARTIAL — 합성 교란20 중 예상 밖 계획3, 실제 권한 경합 전 | [1.1.6 기록](../../evidence/public/patch-116-development-20260928.md) |
+| P116-06 | 단계·usage·누적 예산 | PARTIAL — 개발87+잠금115dispatch·원장446/3000, 3단계/장애 전 | [1.1.6 기록](../../evidence/public/patch-116-development-20260928.md) |
+| P116-07 | 선택 결과 재현·후보 복귀 | PARTIAL — wheel/자료 SHA 고정, 복귀/운영 축약 적용 전 | [1.1.6 기록](../../evidence/public/patch-116-development-20260928.md) |
 
 ## 1.1.7
 

@@ -1,6 +1,6 @@
 # 1.1 계열 진행 현황
 
-2026-09-28 사용자 요청으로1.1.0~1.1.7 계획을 작성했다. **8개 버전·40단계·26개 제안** 중 1.1.0~1.1.5 개발 후보가 진행 중이고, 1.1.6~1.1.7은 PLANNED다. [1.1.5 실행 기록](../../evidence/public/patch-115-development-20260928.md)과 아래 버전별 기록은 부분 LXC 증거이며 전체 인수/출시 PASS가 아니다. 기존1.0.3 개발 후보·과거 시험 상태는 [DevPhase STATUS](../0.DevPhase/STATUS.md)에 유지한다.
+2026-09-28 사용자 요청으로1.1.0~1.1.7 계획을 작성했다. **8개 버전·40단계·26개 제안** 중 1.1.0~1.1.6 개발 후보가 진행 중이고, 1.1.7은 PLANNED다. [1.1.6 실행 기록](../../evidence/public/patch-116-development-20260928.md)과 아래 버전별 기록은 부분 LXC 증거이며 전체 인수/출시 PASS가 아니다. 기존1.0.3 개발 후보·과거 시험 상태는 [DevPhase STATUS](../0.DevPhase/STATUS.md)에 유지한다.
 
 ## 버전 상태
 
@@ -12,7 +12,7 @@
 | [1.1.3](1.1.3/README.md) | F-02, F-03, F-05 | IN_PROGRESS | 0 / 5 | [소스/wheel384 PASS·개발37/37·적용](../../evidence/public/patch-113-development-20260928.md); 실제 전건 인수 전 |
 | [1.1.4](1.1.4/README.md) | R-02, F-04, F-09 | IN_PROGRESS | 0 / 5 | [소스/wheel387 PASS·개발37/37·첫 PCM95/100·적용](../../evidence/public/patch-114-development-20260928.md); 실제 최근곡 재생/복귀 인수 전 |
 | [1.1.5](1.1.5/README.md) | F-07, F-08, R-03 | IN_PROGRESS | 0 / 5 | [wheel392·중계43 PASS·개발37/37·취소 경합100·적용](../../evidence/public/patch-115-development-20260928.md); 전체 W 실제 인수 전 |
-| [1.1.6](1.1.6/README.md) | J-07, J-09, R-04 | PLANNED | 0 / 5 | NOT_RUN |
+| [1.1.6](1.1.6/README.md) | J-07, J-09, R-04 | IN_PROGRESS | 0 / 5 | [개발 비교37/37·잠금200문장 명확103/120 FAIL](../../evidence/public/patch-116-development-20260928.md); 축약 prompt 운영 미채택 |
 | [1.1.7](1.1.7/README.md) | R-05, R-06, R-07 | PLANNED | 0 / 5 | NOT_RUN |
 
 ## 단계 상태
@@ -27,7 +27,7 @@
 | [1.1.3](1.1.3/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 | [1.1.4](1.1.4/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 | [1.1.5](1.1.5/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
-| [1.1.6](1.1.6/README.md) | PLANNED | PLANNED | PLANNED | PLANNED | PLANNED |
+| [1.1.6](1.1.6/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 | [1.1.7](1.1.7/README.md) | PLANNED | PLANNED | PLANNED | PLANNED | PLANNED |
 
 ## 판정 규칙

@@ -7,7 +7,13 @@ from pydantic import ValidationError
 
 from changgeun_inference.contracts import Candidate, DecisionRequest
 from changgeun_inference.ledger import Ledger, LedgerError
-from changgeun_inference.providers import HostedProvider, MockProvider
+from changgeun_inference.providers import (
+    COMPACT_INSTRUCTIONS,
+    INSTRUCTIONS,
+    HostedProvider,
+    MockProvider,
+    instruction_for,
+)
 from changgeun_inference.server import create_app
 from changgeun_inference.service import DecisionService, ServiceError
 
@@ -35,6 +41,14 @@ def request(stage=1, request_id="request", **kwargs):
     )
     fields.update(kwargs)
     return DecisionRequest(**fields)
+
+
+def test_compact_prompt_keeps_safety_and_saves_bytes():
+    assert instruction_for("korean-candidates-dev-v5") == INSTRUCTIONS
+    assert instruction_for("korean-candidates-compact-v1") == COMPACT_INSTRUCTIONS
+    assert len(COMPACT_INSTRUCTIONS.encode()) < len(INSTRUCTIONS.encode())
+    for part in ("negated", "untrusted", "playlist", "queue", "independent", "clarify"):
+        assert part in COMPACT_INSTRUCTIONS
 
 
 @pytest.fixture

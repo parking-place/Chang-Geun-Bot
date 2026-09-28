@@ -236,4 +236,6 @@ class GatewayClient:
             ):
                 raise DomainError("inference_forward_provenance_mismatch")
         self.metrics.outcome("new_call" if new_calls == 1 else "reused_call")
-        return Selection(result["selected_id"], result["probabilities"], total)
+        reported_tokens = usage.get("input_tokens")
+        tokens = reported_tokens if type(reported_tokens) is int and reported_tokens >= 0 else None
+        return Selection(result["selected_id"], result["probabilities"], total, tokens)

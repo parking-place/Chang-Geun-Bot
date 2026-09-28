@@ -1,6 +1,6 @@
 # 1.1.6 — Jev 판단 효율과 독립 한국어 품질
 
-- 상태: **PLANNED — 구현·새 평가 미실행**
+- 상태: **IN_PROGRESS — 개발 비교·첫 잠금200문장 평가 완료, 독립 품질 인수 FAIL**
 - 범위: **J-07, J-09, R-04**. 원안은 [Jev 최적화](../02_JEV_OPTIMIZATION.md)와 [안정화](../03_STABILITY_AND_ACCEPTANCE.md)다.
 - 목적: 프롬프트와 판단 임계값의 개선 효과를 비교하고, 고정 후보의 한국어 의도·대상·확인 판단을 독립 자료로 검증한다.
 - 공통 기준: [실행 규칙](../EXECUTION_RULES.md), [항목 배정](../ITEM_COVERAGE.md), [상태](../STATUS.md), [시험표](../TEST_MATRIX.md).
@@ -54,16 +54,16 @@ Jev API Only, API 1.2, 요청당 최대 3단계/3 dispatch, 전체 12초·단계
 | 증거 | 원문/실제 ID/키를 제외한 aggregate, 기준/후보 차이·실패 분모·채택/유지 결정, 비공개 평가 자료 보관 규칙 |
 | 인수 | [기존 품질 기준](../../0.DevPhase/RELEASE_CRITERIA.md)과 새 시험 ID 연결, 1.1.7이 받을 고정 후보 manifest |
 
-현재 `test_profile.py`의 `korean-eval`은 개발 37문장용이다. 독립 held-out·benchmark·soak runner는 후속 구현 계획이며 완성된 실행 명령으로 안내하지 않는다. DB 마이그레이션은 기본 범위가 아니며 필요해지면 별도 계약과 복귀 검증을 추가한다.
+`test_profile.py`의 `korean-eval`은 개발 37문장용이다. `probe_pipeline.py`에 checksum·구성/중복 검사를 가진200문장 일회 평가 경로를 추가했으나, 첫 잠금 평가가 명확103/120·위험 분류3으로 FAIL했다. 해당 자료는 실패를 확인한 뒤 개발 분석용으로 전환했으며 새 독립 인수에는 새 잠금 자료가 필요하다. benchmark/soak runner는 아직 미완료다. [실행 전 비교 규칙](COMPARISON_PROTOCOL.md)과 [결과](../../../evidence/public/patch-116-development-20260928.md)를 함께 따른다. DB 마이그레이션은 기본 범위가 아니며 필요해지면 별도 계약과 복귀 검증을 추가한다.
 
 ## 다섯 단계
 
 | 단계 | 상태 | 작업 | 종료 산출물 |
 | --- | --- | --- | --- |
-| 01 설계 | PLANNED | 자료 독립성·정답 규칙·사전 채택 기준·누적 예산 확정 | 비교 프로토콜, hash/누계 보존 설계, 평가 분리 기록 |
-| 02 구현 | PLANNED | prompt 후보·임계값 비교 설정·잠금/채점기 구현 | 후보별 불변 manifest, 결과/실패 집계, 도구 사용법 초안 |
-| 03 안전 회귀 | PLANNED | 부정문·주입·권한·주시 취소·단계/기한·채점기 검증 | 격리 mock과 정답 fixture의 영향 회귀 증거 |
-| 04 LXC 검증 | PLANNED | 예산 확인 후 개발 비교 → 설정 잠금 → 독립 실제 Jev 평가 | P116-01~07 결과와 실제 제공 usage/unknown 구분 |
+| 01 설계 | IN_PROGRESS | 자료 독립성·정답 규칙·사전 채택 기준·누적 예산 확정 | 비교 프로토콜, hash/누계 보존 설계, 평가 분리 기록 |
+| 02 구현 | IN_PROGRESS | prompt 후보·임계값 비교 설정·잠금/채점기 구현 | 후보별 불변 manifest, 결과/실패 집계, 도구 사용법 초안 |
+| 03 안전 회귀 | IN_PROGRESS | 부정문·주입·권한·주시 취소·단계/기한·채점기 검증 | 격리 mock과 정답 fixture의 영향 회귀 증거 |
+| 04 LXC 검증 | IN_PROGRESS | 예산 확인 후 개발 비교 → 설정 잠금 → 독립 실제 Jev 평가 | P116-01~07 결과와 실제 제공 usage/unknown 구분 |
 | 05 개발 인수·복귀 | PLANNED | 채택 또는 기준 유지 결정, 이전 후보 복귀, 후속 인계 | 같은 후보에 결합한 품질 증거·남은 게이트·복귀 확인 |
 
 ## 고유 시험

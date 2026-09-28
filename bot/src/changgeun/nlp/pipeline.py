@@ -59,6 +59,7 @@ class Selection:
     selected_id: str
     probabilities: dict[str, float]
     calls: int
+    input_tokens: int | None = None
 
 
 class DecisionPort(Protocol):
