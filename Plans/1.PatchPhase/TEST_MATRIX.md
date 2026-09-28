@@ -1,12 +1,12 @@
 # 1.1 계열 시험 추적표
 
-- 상태: **1.1.0의 P110-01~07 일부 조건 검증 중; 나머지 49개 고유 시험 NOT_RUN**. [부분 증거](../../evidence/public/patch-110-development-20260928.md)를 따른다.
+- 상태: **1.1.0 P110과 1.1.1 P111의 일부 조건 검증 중; 1.1.2~1.1.7의 42개 고유 시험 NOT_RUN**. [1.1.0](../../evidence/public/patch-110-development-20260928.md)·[1.1.1](../../evidence/public/patch-111-development-20260928.md) 부분 증거를 따른다.
 - 범위: 8개 버전별7개 시험. 단계/버전 상태는 [STATUS](STATUS.md), 포함 항목은 [ITEM_COVERAGE](ITEM_COVERAGE.md)에 기록한다.
 - 아래 시험명은 추적용 요약이다. 상세 통과 조건과 하위 시나리오는 각 버전 README를 따른다. 대표 사례 하나의 성공으로 한 ID 전체를 PASS 처리하지 않는다.
 
 ## 실행과 증거
 
-제품 단위/mock·DB·lint/타입·실제 API·Discord/음성 시험은 모두 **DiscordBotLXC**에서 한다. 로컬 문서 검사는 이 표의 PASS 근거가 아니다. 1.1.0의 LXC 소스/설치 후보 회귀와 개발 Jev 계측은 실행했으며 사람의 조작/청취·전체 성능 인수는 남아 있다.
+제품 단위/mock·DB·lint/타입·실제 API·Discord/음성 시험은 모두 **DiscordBotLXC**에서 한다. 로컬 문서 검사는 이 표의 PASS 근거가 아니다. 1.1.0·1.1.1의 LXC 소스/설치 후보 회귀와 개발 Jev 계측은 실행했으며 사람의 조작/청취·전체 성능 인수는 남아 있다.
 
 각 ID에 실제 source/wheel/config/profile/schema·fixture hash, 실행 시각/환경, 자동/실제 구분, 전체 시도/실패/미실행 분모와 증거 경로를 연결한다. 유료 요청은 원장 전후 누계·예산과 결합하고 비밀 제거 요약만 공개한다. [공통 계약](EXECUTION_RULES.md)과 [증거 양식](../0.DevPhase/EVIDENCE_TEMPLATE.md)을 적용한다.
 
@@ -36,13 +36,13 @@
 
 | ID | 시험 시나리오 | 결과 | 새 실행 증거 |
 | --- | --- | --- | --- |
-| P111-01 | 연속 판단·idle 만료·종료/재시작 | NOT_RUN | — |
-| P111-02 | 동시 health·캐시 만료·profile/token/TLS 변경 | NOT_RUN | — |
+| P111-01 | 연속 판단·idle 만료·종료/재시작 | PARTIAL — client 재사용/close mock·서비스 재기동 | [1.1.1 기록](../../evidence/public/patch-111-development-20260928.md) |
+| P111-02 | 동시 health·캐시 만료·profile/token/TLS 변경 | PARTIAL — 동일 binding 합류·변경 거절 mock | [1.1.1 기록](../../evidence/public/patch-111-development-20260928.md) |
 | P111-03 | pool 포화·느린 청크·단계3 잔여 부족 | NOT_RUN | — |
-| P111-04 | 정상/64KiB 경계·초과·깨진 JSON·수신 취소 | NOT_RUN | — |
-| P111-05 | 순간 요청·queue_full·외부429/인증 실패·지속 장애/복구 | NOT_RUN | — |
-| P111-06 | 기준/후보의 warm/cold·음성 부하 비교 | NOT_RUN | — |
-| P111-07 | service drain·TLS 재준비·이전 wheel 복귀 | NOT_RUN | — |
+| P111-04 | 정상/64KiB 경계·초과·깨진 JSON·수신 취소 | PARTIAL — 초과 청크 조기 중단 mock | [1.1.1 기록](../../evidence/public/patch-111-development-20260928.md) |
+| P111-05 | 순간 요청·queue_full·외부429/인증 실패·지속 장애/복구 | PARTIAL — 3연속 일시 장애/비일시 reset mock | [1.1.1 기록](../../evidence/public/patch-111-development-20260928.md) |
+| P111-06 | 기준/후보의 warm/cold·음성 부하 비교 | PARTIAL — 같은 개발37문장 관측; 음성 부하 미실행 | [1.1.1 기록](../../evidence/public/patch-111-development-20260928.md) |
+| P111-07 | service drain·TLS 재준비·이전 wheel 복귀 | PARTIAL — 봇/중계 교체·원장 보존; 이전 wheel 복귀 미실행 | [1.1.1 기록](../../evidence/public/patch-111-development-20260928.md) |
 
 ## 1.1.2
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import ssl
 import time
 from pathlib import Path
@@ -29,9 +31,59 @@ class GatewayClient:
         url = urlsplit(self.base_url)
         if url.scheme != "https" or not url.hostname or url.username or url.password:
             raise ValueError("verified internal HTTPS endpoint required")
-        self.token = Path(config["token_file"]).read_text().strip()
-        self.tls = ssl.create_default_context(cafile=str(config["ca_file"]))
+        self.token_file = Path(config["token_file"])
+        self.ca_file = Path(config["ca_file"])
+        self.token = self.token_file.read_text().strip()
+        self.tls = ssl.create_default_context(cafile=str(self.ca_file))
         self.metrics = Metrics()
+        self._client: httpx.AsyncClient | None = None
+        self._client_lock = asyncio.Lock()
+        self._ready_lock = asyncio.Lock()
+        self._ready_binding: tuple[Any, ...] | None = None
+        self._ready_until = 0.0
+        self._credential_version = self._file_version()
+        self._consecutive_failures = 0
+        self._blocked_until = 0.0
+        self._closed = False
+
+    def _file_version(self) -> tuple[int, int]:
+        return self.token_file.stat().st_mtime_ns, self.ca_file.stat().st_mtime_ns
+
+    async def _http(self) -> httpx.AsyncClient:
+        async with self._client_lock:
+            if self._closed:
+                raise DomainError("inference_temporarily_unavailable")
+            if self._client is None or self._client.is_closed:
+                self._client = httpx.AsyncClient(
+                    transport=self.transport,
+                    verify=self.tls,
+                    timeout=4,
+                    limits=httpx.Limits(
+                        max_connections=5, max_keepalive_connections=5, keepalive_expiry=15
+                    ),
+                    trust_env=False,
+                    follow_redirects=False,
+                )
+            return self._client
+
+    async def close(self) -> None:
+        self._ready_until = 0
+        async with self._client_lock:
+            self._closed = True
+            if self._client is not None:
+                await self._client.aclose()
+                self._client = None
+
+    async def _bounded_json(self, response: httpx.Response) -> dict[str, Any]:
+        body = bytearray()
+        async for chunk in response.aiter_bytes():
+            if len(body) + len(chunk) > 65536:
+                raise DomainError("inference_response_too_large")
+            body.extend(chunk)
+        result = json.loads(body)
+        if not isinstance(result, dict):
+            raise DomainError("invalid_inference_response")
+        return result
 
     async def ready(self) -> None:
         observed_at = time.monotonic()
@@ -41,52 +93,86 @@ class GatewayClient:
             self.metrics.duration("gateway_ready", time.monotonic() - observed_at)
 
     async def _ready(self) -> None:
-        async with httpx.AsyncClient(
-            transport=self.transport,
-            verify=self.tls,
-            timeout=2,
-            trust_env=False,
-            follow_redirects=False,
-        ) as client:
-            response = await client.get(
-                self.base_url + "/health", headers={"Authorization": "Bearer " + self.token}
-            )
-            response.raise_for_status()
-            result = response.json()
-        if not result.get("ready") or (
-            result.get("provider"),
-            result.get("profile_id"),
-            result.get("config_hash"),
-        ) != (self.provider, self.profile_id, self.config_hash):
+        if self._closed:
+            raise DomainError("inference_temporarily_unavailable")
+        if self._file_version() != self._credential_version:
+            self._ready_until = 0
             raise DomainError("inference_profile_mismatch")
+        binding = (self.provider, self.profile_id, self.config_hash, self._credential_version)
+        if self._ready_binding == binding and time.monotonic() < self._ready_until:
+            return
+        async with self._ready_lock:
+            if self._ready_binding == binding and time.monotonic() < self._ready_until:
+                return
+            self._ready_until = 0
+            client = await self._http()
+            async with client.stream(
+                "GET",
+                self.base_url + "/health",
+                headers={"Authorization": "Bearer " + self.token},
+                timeout=2,
+            ) as response:
+                response.raise_for_status()
+                result = await self._bounded_json(response)
+            if not result.get("ready") or (
+                result.get("provider"),
+                result.get("profile_id"),
+                result.get("config_hash"),
+            ) != (self.provider, self.profile_id, self.config_hash):
+                raise DomainError("inference_profile_mismatch")
+            self._ready_binding = binding
+            self._ready_until = time.monotonic() + 2
 
     async def choose(self, payload: dict[str, Any], timeout: float) -> Selection:
         observed_at = time.monotonic()
+        dispatched = False
         try:
-            return await self._choose(payload, timeout)
-        except BaseException:
+            if self._closed:
+                raise DomainError("inference_temporarily_unavailable")
+            if self._file_version() != self._credential_version:
+                self._ready_until = 0
+                raise DomainError("inference_profile_mismatch")
+            if observed_at < self._blocked_until:
+                raise DomainError("inference_temporarily_unavailable")
+            dispatched = True
+            result = await self._choose(payload, timeout)
+        except (httpx.RequestError, httpx.HTTPStatusError) as exc:
             self.metrics.outcome("unknown_call")
+            if not isinstance(exc, httpx.HTTPStatusError) or exc.response.status_code in {
+                429,
+                500,
+                502,
+                503,
+                504,
+            }:
+                self._consecutive_failures += 1
+                if self._consecutive_failures >= 3:
+                    self._blocked_until = time.monotonic() + 5
+            else:
+                self._consecutive_failures = 0
             raise
+        except BaseException:
+            if dispatched:
+                self.metrics.outcome("unknown_call")
+            raise
+        else:
+            self._consecutive_failures = 0
+            self._blocked_until = 0
+            return result
         finally:
             self.metrics.duration("gateway_choose", time.monotonic() - observed_at)
 
     async def _choose(self, payload: dict[str, Any], timeout: float) -> Selection:
-        async with httpx.AsyncClient(
-            transport=self.transport,
-            verify=self.tls,
+        client = await self._http()
+        async with client.stream(
+            "POST",
+            self.base_url + "/v1/decide",
+            json=payload,
+            headers={"Authorization": "Bearer " + self.token},
             timeout=timeout,
-            trust_env=False,
-            follow_redirects=False,
-        ) as client:
-            response = await client.post(
-                self.base_url + "/v1/decide",
-                json=payload,
-                headers={"Authorization": "Bearer " + self.token},
-            )
+        ) as response:
             response.raise_for_status()
-            if len(response.content) > 65536:
-                raise DomainError("inference_response_too_large")
-            result = response.json()
+            result = await self._bounded_json(response)
         if (
             result.get("schema_version"),
             result.get("provider"),

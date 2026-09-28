@@ -12,6 +12,7 @@ python3 scripts/check_repository.py
 | `test_profile.py` | 로컬 제어; Jev API 고정·봇 전용 후보 배포·상태·실제 전송·계약 회귀 |
 | `deploy_watch_candidate.py` | 로컬 stdlib 제어; 한 LXC 중계/예산을 유지하며 봇만 전환 |
 | `install_single_lxc_gateway.py` | DiscordBotLXC 배포 계정; 별도 중계 계정·loopback TLS·고정 epoch/예산 준비, 제한 stdin 입력 |
+| `switch_single_lxc_gateway.py` | DiscordBotLXC root; 중계 wheel만 교체하고 동일 프로필·원장·예산·TLS binding 확인, 실패 시 이전 unit 자동 복귀 |
 | `probe_watch.py` | DiscordBotLXC; 실제6명령/기본 권한·DB 이관·prefix 상태 읽기 전용 검사 |
 | `profile_control.py` | 지정 LXC 배포 계정; 제한 설정·run별 DB/원장·tombstone·이전 unit 복구 |
 | `prepare_candidate.py` | 지정 LXC 배포 계정; 고정 wheel과 분리 runtime 준비·의존성 검사 |

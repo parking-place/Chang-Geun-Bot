@@ -185,6 +185,10 @@ def main() -> None:
                         != (manifest[name + "_sha256"])
                     ):
                         parser.error("candidate media runtime changed")
+                node = Path(manifest.get("node_path", "/usr/bin/node"))
+                version = run([str(node), "--version"], capture=True).decode().strip()
+                if int(version.removeprefix("v").split(".")[0]) < 22:
+                    parser.error("candidate media runtime requires Node 22 or newer")
                 config["media"]["youtube_audio_enabled"] = True
                 config["media"]["youtube_js_runtime"] = manifest.get("node_path", "/usr/bin/node")
             if "static_text_channels" in plan:
@@ -341,6 +345,9 @@ def main() -> None:
         private_write(unit, (run_dir / (args.component + ".service")).read_text(), root_owner=True)
         run(["systemctl", "daemon-reload"])
         run(["systemctl", "start", service])
+        run(["systemctl", "is-active", "--quiet", service])
+        # Type=simple can report active before the bot completes dependency checks.
+        time.sleep(2)
         run(["systemctl", "is-active", "--quiet", service])
         print(args.component + " active; isolated run data retained", flush=True)
     else:

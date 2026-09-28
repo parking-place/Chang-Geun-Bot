@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -64,6 +65,33 @@ class HostedProvider:
             raise ValueError("hosted API key missing")
         self.endpoint, self.model, self.api_key = endpoint, model, api_key
         self.transport = transport
+        self._client: httpx.AsyncClient | None = None
+        self._client_lock = asyncio.Lock()
+        self._closed = False
+
+    async def _http(self) -> httpx.AsyncClient:
+        async with self._client_lock:
+            if self._closed:
+                raise RuntimeError("provider closed")
+            if self._client is None or self._client.is_closed:
+                # The gateway admits one active dispatch; the pool cannot raise that limit.
+                self._client = httpx.AsyncClient(
+                    transport=self.transport,
+                    follow_redirects=False,
+                    trust_env=False,
+                    timeout=4,
+                    limits=httpx.Limits(
+                        max_connections=2, max_keepalive_connections=1, keepalive_expiry=15
+                    ),
+                )
+            return self._client
+
+    async def close(self) -> None:
+        async with self._client_lock:
+            self._closed = True
+            if self._client is not None:
+                await self._client.aclose()
+                self._client = None
 
     async def decide(self, request: DecisionRequest, timeout: float) -> ProviderResult:
         payload = {
@@ -78,21 +106,26 @@ class HostedProvider:
             },
         }
         # HTTPX default transport has zero retries. Cross-host redirects are forbidden.
-        async with httpx.AsyncClient(
-            transport=self.transport, follow_redirects=False, trust_env=False, timeout=timeout
-        ) as client:
-            response = await client.post(
-                self.endpoint,
-                json=payload,
-                headers={
-                    "Authorization": "Bearer " + self.api_key,
-                    "Content-Type": "application/json",
-                },
-            )
+        client = await self._http()
+        async with client.stream(
+            "POST",
+            self.endpoint,
+            json=payload,
+            headers={
+                "Authorization": "Bearer " + self.api_key,
+                "Content-Type": "application/json",
+            },
+            timeout=timeout,
+        ) as response:
             response.raise_for_status()
-            if len(response.content) > 65536:
-                raise ValueError("provider response too large")
-            raw = response.json()
+            body = bytearray()
+            async for chunk in response.aiter_bytes():
+                if len(body) + len(chunk) > 65536:
+                    raise ValueError("provider response too large")
+                body.extend(chunk)
+            raw = json.loads(body)
+            if not isinstance(raw, dict):
+                raise ValueError("invalid provider response")
         answer = raw["answers"]["decision"]
         if answer.get("type") != "choice":
             raise ValueError("wrong provider answer type")

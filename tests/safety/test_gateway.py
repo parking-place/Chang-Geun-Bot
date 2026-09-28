@@ -289,3 +289,33 @@ async def test_hosted_forward_provenance_always_null():
     result = await provider.decide(request(), 1)
     assert result.forward_passes is None
     assert result.model_revision is None
+    first_client = provider._client
+    await provider.decide(request(request_id="other"), 1)
+    assert provider._client is first_client
+    await provider.close()
+    assert first_client.is_closed
+
+
+@pytest.mark.asyncio
+async def test_hosted_streaming_cap_stops_before_last_chunk():
+    chunks = []
+
+    class Oversize(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            for number in range(4):
+                chunks.append(number)
+                yield b"x" * 32768
+
+        async def aclose(self):
+            pass
+
+    provider = HostedProvider(
+        "https://api.typesafe.ai/v1/systemone",
+        "jev-latest",
+        "test-key",
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, stream=Oversize())),
+    )
+    with pytest.raises(ValueError, match="provider response too large"):
+        await provider.decide(request(), 1)
+    assert chunks == [0, 1, 2]
+    await provider.close()

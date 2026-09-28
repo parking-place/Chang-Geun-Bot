@@ -125,6 +125,11 @@ def natural_failure(exc: Exception) -> tuple[str, str]:
                 "deadline",
                 "요청을 제때 완료하지 못했어. 잠시 뒤 새로 요청하거나 슬래시 명령을 사용해줘.",
             )
+        if code == "inference_temporarily_unavailable":
+            return (
+                "busy",
+                "자연어 연결이 잠시 불안정해. 잠시 뒤 새로 요청하거나 슬래시 명령을 사용해줘.",
+            )
         if code in {
             "inference_profile_mismatch",
             "inference_response_binding_mismatch",
@@ -396,6 +401,8 @@ class ChangGeunClient(discord.Client):
             await voice.disconnect(force=True)
         if isinstance(self.audio.resolver, MediaResolver):
             await self.audio.resolver.close()
+        if self.gateway is not None:
+            await self.gateway.close()
         await super().close()
 
     async def _timers(self) -> None:

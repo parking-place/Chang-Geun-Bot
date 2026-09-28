@@ -69,6 +69,8 @@ def create_app(service: DecisionService, token: str) -> FastAPI:
     async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
         yield
         await service.drain()
+        if isinstance(service.provider, HostedProvider):
+            await service.provider.close()
 
     app = FastAPI(
         title="ChangGeun decision gateway",

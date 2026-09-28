@@ -1,3 +1,4 @@
+import asyncio
 import ssl
 
 import httpx
@@ -5,6 +6,108 @@ import pytest
 
 from changgeun.domain.models import DomainError
 from changgeun.nlp.client import GatewayClient
+
+
+def config_for(tmp_path):
+    token = tmp_path / "token"
+    token.write_text("x" * 32)
+    return {
+        "provider": "jev-api",
+        "profile_id": "test-jev-api",
+        "config_hash": "a" * 64,
+        "base_url": "https://gateway.invalid",
+        "token_file": str(token),
+        "ca_file": ssl.get_default_verify_paths().cafile,
+    }
+
+
+@pytest.mark.asyncio
+async def test_health_singleflight_cache_binding_and_client_close(tmp_path):
+    config = config_for(tmp_path)
+    calls = []
+
+    def handle(request):
+        calls.append(request.url.path)
+        return httpx.Response(
+            200,
+            json={
+                "ready": True,
+                "provider": config["provider"],
+                "profile_id": config["profile_id"],
+                "config_hash": config["config_hash"],
+            },
+        )
+
+    client = GatewayClient(config, transport=httpx.MockTransport(handle))
+    await asyncio.gather(*(client.ready() for _ in range(5)))
+    assert calls == ["/health"]
+    cached_client = client._client
+    await client.ready()
+    assert calls == ["/health"] and client._client is cached_client
+    client.config_hash = "b" * 64
+    with pytest.raises(DomainError, match="inference_profile_mismatch"):
+        await client.ready()
+    assert calls == ["/health", "/health"]
+    await client.close()
+    assert cached_client.is_closed
+    with pytest.raises(DomainError, match="inference_temporarily_unavailable"):
+        await client.ready()
+
+
+@pytest.mark.asyncio
+async def test_streaming_response_rejects_over_limit_before_remaining_chunks(tmp_path):
+    chunks = []
+
+    class Oversize(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            for number in range(4):
+                chunks.append(number)
+                yield b"x" * 32768
+
+        async def aclose(self):
+            pass
+
+    client = GatewayClient(
+        config_for(tmp_path),
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, stream=Oversize())),
+    )
+    with pytest.raises(DomainError, match="inference_response_too_large"):
+        await client.choose({"request_id": "one", "stage_index": 1}, 1)
+    assert chunks == [0, 1, 2]
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_three_transient_failures_block_new_attempt_without_probe(tmp_path):
+    attempts = []
+
+    def handle(request):
+        attempts.append(request.url.path)
+        return httpx.Response(503)
+
+    client = GatewayClient(config_for(tmp_path), transport=httpx.MockTransport(handle))
+    for _ in range(3):
+        with pytest.raises(httpx.HTTPStatusError):
+            await client.choose({"request_id": "one", "stage_index": 1}, 1)
+    with pytest.raises(DomainError, match="inference_temporarily_unavailable"):
+        await client.choose({"request_id": "two", "stage_index": 1}, 1)
+    assert attempts == ["/v1/decide"] * 3
+    assert 0 < client._blocked_until - __import__("time").monotonic() <= 5
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_nontransient_failure_resets_transient_streak(tmp_path):
+    codes = iter((503, 400, 503, 503, 400))
+    client = GatewayClient(
+        config_for(tmp_path),
+        transport=httpx.MockTransport(lambda request: httpx.Response(next(codes))),
+    )
+    for _ in range(5):
+        with pytest.raises(httpx.HTTPStatusError):
+            await client.choose({"request_id": "one", "stage_index": 1}, 1)
+    assert client._blocked_until == 0
+    await client.close()
 
 
 @pytest.mark.parametrize(
