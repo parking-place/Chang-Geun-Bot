@@ -14,6 +14,8 @@
 
 J-02는 봇/중계의 유한 연결 풀과 명시적 종료를, J-03은 같은 binding의 동시 health 합류·2초 캐시를, J-08은 수신 중 64KiB 경계·안전 오류 문구·3연속 일시 전송 실패 뒤 최대5초 신규 접수 차단을 구현했다. 유료 복구 탐침·자동 재시도·fallback은 추가하지 않았다. 기준 대비 실제 표본의 p50/p95 관측만으로 각각의 최적화 효과나 음성 부하 시 개선을 확정하지 않는다.
 
-**실패·복구:** 중간 봇 후보 `patch111c`는 LXC의 기본 `/usr/bin/node`가 v20.19.2라서 `media_runtime_unsupported`로 기동 실패했다. 배포 스크립트의 즉시 ACTIVE 출력은 지속 기동 증거가 아니었다. [Node.js 공식 v22.23.3 배포물](https://nodejs.org/download/release/v22.23.3/)과 같은 디렉터리의 `SHASUMS256.txt`로 `linux-x64` tarball을 검증하고, LXC의 격리된 `/opt/changgeun-dev/runtime/node-v22.23.3-linux-x64/bin/node`를 새 고정 후보에 명시했다. 최종 후보는 지속 `systemctl active`와 Jev 재평가·readiness를 통과했다. 이전 `patch111c` 기동 실패는 PASS에 포함하지 않는다.
+**실패·복구:** 중간 봇 후보 `patch111c`는 LXC의 기본 `/usr/bin/node`가 v20.19.2라서 `media_runtime_unsupported`로 기동 실패했다. 배포 스크립트의 즉시 ACTIVE 출력은 지속 기동 증거가 아니었다. [Node.js 공식 v22.23.3 배포물](https://nodejs.org/download/release/v22.23.3/)과 같은 디렉터리의 `SHASUMS256.txt`로 `linux-x64` tarball을 검증하고, LXC의 격리된 `/opt/changgeun-dev/runtime/node-v22.23.3-linux-x64/bin/node`를 새 고정 후보에 명시했다. `patch111d`는 지속 `systemctl active`와 Jev 재평가·readiness를 통과했다. 이전 `patch111c` 기동 실패는 PASS에 포함하지 않는다.
+
+**후속 정정(1.1.3):** `patch111d`의 Node 경로는 YouTube 격리 작업자의 허용 목록인 `/opt/changgeun-dev/runtimes/`와 달랐다. 이 후보에서 첫 PCM/YouTube 재생은 검증되지 않았으며 실제로 준비 실패할 수 있었다. 1.1.3의 `patch113b`에서 허용 경로와 첫 PCM을 확인했다. 1.1.1의 Jev/HTTP 성적은 그대로이나 미디어 인수 근거로 사용하지 않는다.
 
 **남은 인수:** P111의 idle 재연결·pool 포화/취소·429/인증/복구·음성 부하 A/B·실제 Discord 오류/슬래시 대안·봇/중계 이전 wheel 복귀 시험이 필요하다. 사람의 명령/청취 확인을 요청했으나 아직 결과를 받지 않았다. 후보의 정식 `VERSION`·태그·`DONE` 판정은 하지 않는다.

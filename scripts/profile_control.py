@@ -186,6 +186,11 @@ def main() -> None:
                     ):
                         parser.error("candidate media runtime changed")
                 node = Path(manifest.get("node_path", "/usr/bin/node"))
+                if node.is_symlink() or not (
+                    node == Path("/usr/bin/node")
+                    or node.is_relative_to("/opt/changgeun-dev/runtimes")
+                ):
+                    parser.error("candidate Node path is outside the worker allowlist")
                 version = run([str(node), "--version"], capture=True).decode().strip()
                 if int(version.removeprefix("v").split(".")[0]) < 22:
                     parser.error("candidate media runtime requires Node 22 or newer")
