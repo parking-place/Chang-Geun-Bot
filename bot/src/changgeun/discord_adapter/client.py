@@ -31,6 +31,7 @@ from changgeun.application.watch import (
 )
 from changgeun.config import BotConfig
 from changgeun.discord_adapter import watch as watch_commands
+from changgeun.discord_adapter.autocomplete import catalog_choices
 from changgeun.discord_adapter.mention import MentionEntry
 from changgeun.discord_adapter.prefix import MessageLedger, parse_prefix
 from changgeun.discord_adapter.runtime import AudioRuntime
@@ -41,6 +42,7 @@ from changgeun.domain.models import (
     Actor,
     DomainError,
     Policy,
+    authorize,
     normalized_name,
 )
 from changgeun.nlp.client import GatewayClient
@@ -1488,6 +1490,54 @@ class ChangGeunClient(discord.Client):
         @tree.command(name="부탁", description="한국어로 한 가지 동작 요청")
         async def natural(interaction: discord.Interaction, 내용: str) -> None:
             await self.natural_input(interaction, 내용)
+
+        @rename_playlist.autocomplete("목록")
+        @delete_playlist.autocomplete("목록")
+        @copy_playlist.autocomplete("목록")
+        @export_playlist.autocomplete("목록")
+        @add_song.autocomplete("목록")
+        @remove_song.autocomplete("목록")
+        @move_song.autocomplete("목록")
+        @play.autocomplete("목록")
+        async def complete_playlist(
+            interaction: discord.Interaction, current: str
+        ) -> list[app_commands.Choice[str]]:
+            try:
+                actor = await asyncio.wait_for(self.fresh_actor(interaction), 1.5)
+                authorize(
+                    self.make_plan(actor, str(interaction.id), Action.PLAYLIST_LIST, {}),
+                    actor,
+                    self.config.policy,
+                )
+                return [
+                    app_commands.Choice(name=safe(name), value=identifier)
+                    for name, identifier in catalog_choices(
+                        self.db, actor.guild_id, current, "playlist"
+                    )
+                ]
+            except (DomainError, discord.HTTPException, TimeoutError, sqlite3.Error, ValueError):
+                return []
+
+        @add_song.autocomplete("곡")
+        @play.autocomplete("곡")
+        async def complete_track(
+            interaction: discord.Interaction, current: str
+        ) -> list[app_commands.Choice[str]]:
+            try:
+                actor = await asyncio.wait_for(self.fresh_actor(interaction), 1.5)
+                authorize(
+                    self.make_plan(actor, str(interaction.id), Action.CATALOG_SEARCH, {}),
+                    actor,
+                    self.config.policy,
+                )
+                return [
+                    app_commands.Choice(name=safe(name), value=identifier)
+                    for name, identifier in catalog_choices(
+                        self.db, actor.guild_id, current, "track"
+                    )
+                ]
+            except (DomainError, discord.HTTPException, TimeoutError, sqlite3.Error, ValueError):
+                return []
 
     async def edit_number(
         self,

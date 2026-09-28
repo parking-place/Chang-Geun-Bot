@@ -164,13 +164,13 @@ async def test_clarify_ends_without_second_question(env):
 
 
 @pytest.mark.asyncio
-async def test_non_dj_denial_never_enters_second_stage(env):
+async def test_non_dj_denial_never_enters_paid_stage(env):
     route, port = pipeline(env, ["play_request"])
     with pytest.raises(DomainError, match="dj_required"):
         await route.interpret(
             "새벽 노동요 혹은 새벽 작업곡 재생해줘", replace(env[1], role_ids=frozenset())
         )
-    assert len(port.requests) == 1
+    assert len(port.requests) == 0
 
 
 def test_context_never_crosses_actor_channel_guild_or_ttl(env):
@@ -186,6 +186,40 @@ def test_context_never_crosses_actor_channel_guild_or_ttl(env):
         assert cache.get(altered) == []
     clock[0] = 120
     assert cache.get(actor) == []
+
+
+def test_playlist_ranking_prefers_specific_name_and_never_hides_overflow(env):
+    route, _ = pipeline(env, [])
+    with env[0].transaction() as conn:
+        for index, name in enumerate("가나다라마바사아자차카타"):
+            conn.execute(
+                "INSERT INTO playlists(guild_id,id,name,normalized_name) VALUES(?,?,?,?)",
+                ("1", f"extra-{index}", name, name),
+            )
+    snapshot = route._snapshot("1")
+    group, candidates = route._candidates("새벽 노동요 목록 재생해줘", env[1], "request", snapshot)
+    assert group == "play_request"
+    assert candidates[0].plan.arguments["playlist_id"] == env[5][0]
+    group, candidates = route._candidates(
+        "가나다라마바사아자차카타 목록 재생해줘", env[1], "request", snapshot
+    )
+    assert group == "clarify" and candidates == []
+
+
+@pytest.mark.asyncio
+async def test_followup_stage_reads_only_session_marker(env):
+    route, _ = pipeline(env, ["play_request", "c1"])
+    reads = []
+    original = route._snapshot
+
+    def snapshot(guild):
+        reads.append("full")
+        return original(guild)
+
+    route._snapshot = snapshot
+    plan = await route.interpret("새벽 노동요 혹은 새벽 작업곡 재생해줘", env[1])
+    assert plan is not None
+    assert reads == ["full"]
 
 
 @pytest.mark.asyncio

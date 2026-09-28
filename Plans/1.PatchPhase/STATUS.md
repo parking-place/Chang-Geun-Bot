@@ -1,6 +1,6 @@
 # 1.1 계열 진행 현황
 
-2026-09-28 사용자 요청으로1.1.0~1.1.7 계획을 작성했다. **8개 버전·40단계·26개 제안** 중 1.1.0·1.1.1 개발 후보가 진행 중이고, 1.1.2~1.1.7은 PLANNED다. [1.1.0](../../evidence/public/patch-110-development-20260928.md)·[1.1.1](../../evidence/public/patch-111-development-20260928.md) 부분 실행은 전체 인수/출시 PASS가 아니다. 기존1.0.3 개발 후보·과거 시험 상태는 [DevPhase STATUS](../0.DevPhase/STATUS.md)에 유지한다.
+2026-09-28 사용자 요청으로1.1.0~1.1.7 계획을 작성했다. **8개 버전·40단계·26개 제안** 중 1.1.0~1.1.2 개발 후보가 진행 중이고, 1.1.3~1.1.7은 PLANNED다. [1.1.0](../../evidence/public/patch-110-development-20260928.md)·[1.1.1](../../evidence/public/patch-111-development-20260928.md)·[1.1.2](../../evidence/public/patch-112-development-20260928.md) 부분 실행은 전체 인수/출시 PASS가 아니다. 기존1.0.3 개발 후보·과거 시험 상태는 [DevPhase STATUS](../0.DevPhase/STATUS.md)에 유지한다.
 
 ## 버전 상태
 
@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- |
 | [1.1.0](1.1.0/README.md) | R-01, J-01, R-08, F-01 | IN_PROGRESS | 0 / 5 | [소스/wheel373 PASS·개발37/37·적용](../../evidence/public/patch-110-development-20260928.md); 실제 전건 인수 전 |
 | [1.1.1](1.1.1/README.md) | J-02, J-03, J-08 | IN_PROGRESS | 0 / 5 | [소스/wheel378 PASS·중계42 PASS·개발37/37·적용](../../evidence/public/patch-111-development-20260928.md); 실제 전건 인수 전 |
-| [1.1.2](1.1.2/README.md) | J-04, J-05, J-06, F-06 | PLANNED | 0 / 5 | NOT_RUN |
+| [1.1.2](1.1.2/README.md) | J-04, J-05, J-06, F-06 | IN_PROGRESS | 0 / 5 | [소스/wheel381 PASS·개발37/37·적용](../../evidence/public/patch-112-development-20260928.md); 실제 전건 인수 전 |
 | [1.1.3](1.1.3/README.md) | F-02, F-03, F-05 | PLANNED | 0 / 5 | NOT_RUN |
 | [1.1.4](1.1.4/README.md) | R-02, F-04, F-09 | PLANNED | 0 / 5 | NOT_RUN |
 | [1.1.5](1.1.5/README.md) | F-07, F-08, R-03 | PLANNED | 0 / 5 | NOT_RUN |
@@ -23,7 +23,7 @@
 | --- | --- | --- | --- | --- | --- |
 | [1.1.0](1.1.0/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 | [1.1.1](1.1.1/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
-| [1.1.2](1.1.2/README.md) | PLANNED | PLANNED | PLANNED | PLANNED | PLANNED |
+| [1.1.2](1.1.2/README.md) | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | IN_PROGRESS | PLANNED |
 | [1.1.3](1.1.3/README.md) | PLANNED | PLANNED | PLANNED | PLANNED | PLANNED |
 | [1.1.4](1.1.4/README.md) | PLANNED | PLANNED | PLANNED | PLANNED | PLANNED |
 | [1.1.5](1.1.5/README.md) | PLANNED | PLANNED | PLANNED | PLANNED | PLANNED |

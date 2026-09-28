@@ -1,6 +1,6 @@
 # 1.1 계열 시험 추적표
 
-- 상태: **1.1.0 P110과 1.1.1 P111의 일부 조건 검증 중; 1.1.2~1.1.7의 42개 고유 시험 NOT_RUN**. [1.1.0](../../evidence/public/patch-110-development-20260928.md)·[1.1.1](../../evidence/public/patch-111-development-20260928.md) 부분 증거를 따른다.
+- 상태: **1.1.0~1.1.2 P110~P112의 일부 조건 검증 중; 1.1.3~1.1.7의 35개 고유 시험 NOT_RUN**. [계열 현황](STATUS.md)과 각 버전 실행 기록을 따른다.
 - 범위: 8개 버전별7개 시험. 단계/버전 상태는 [STATUS](STATUS.md), 포함 항목은 [ITEM_COVERAGE](ITEM_COVERAGE.md)에 기록한다.
 - 아래 시험명은 추적용 요약이다. 상세 통과 조건과 하위 시나리오는 각 버전 README를 따른다. 대표 사례 하나의 성공으로 한 ID 전체를 PASS 처리하지 않는다.
 
@@ -52,13 +52,13 @@
 
 | ID | 시험 시나리오 | 결과 | 새 실행 증거 |
 | --- | --- | --- | --- |
-| P112-01 | 단일 DJ 행동의 권한 부족·음성 불일치 | NOT_RUN | — |
+| P112-01 | 단일 DJ 행동의 권한 부족·음성 불일치 | PARTIAL — DJ 거절 신규 dispatch0 mock | [1.1.2 기록](../../evidence/public/patch-112-development-20260928.md) |
 | P112-02 | 혼합 권한 후보·신규 동적 채널·중간 권한/주시 취소 | NOT_RUN | — |
-| P112-03 | 작은/큰 자료·긴 큐에서 단계별 조회 | NOT_RUN | — |
+| P112-03 | 작은/큰 자료·긴 큐에서 단계별 조회 | PARTIAL — 후속 전체 snapshot 재조회0 mock, 대형 측정 미실행 | [1.1.2 기록](../../evidence/public/patch-112-development-20260928.md) |
 | P112-04 | 조회 사이 목록/큐/현재곡·주시 세대 변경 | NOT_RUN | — |
-| P112-05 | 정확명/별칭/짧은 이름·동명·후보10개 경계 | NOT_RUN | — |
-| P112-06 | 자동완성의 입력/빈 결과·서버 경계·삭제/이름 변경 | NOT_RUN | — |
-| P112-07 | 후보 고정·이관 여부·이전 바이너리/DB 복귀 | NOT_RUN | — |
+| P112-05 | 정확명/별칭/짧은 이름·동명·후보10개 경계 | PARTIAL — 구체명 우선·11개 재질문 mock | [1.1.2 기록](../../evidence/public/patch-112-development-20260928.md) |
+| P112-06 | 자동완성의 입력/빈 결과·서버 경계·삭제/이름 변경 | PARTIAL — 서버 격리·삭제 제외·별칭 mock; 실제 Discord 미확인 | [1.1.2 기록](../../evidence/public/patch-112-development-20260928.md) |
+| P112-07 | 후보 고정·이관 여부·이전 바이너리/DB 복귀 | PARTIAL — wheel/manifest·개발37/37, 복귀 미실행 | [1.1.2 기록](../../evidence/public/patch-112-development-20260928.md) |
 
 ## 1.1.3
 

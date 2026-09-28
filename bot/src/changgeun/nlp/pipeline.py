@@ -198,6 +198,19 @@ class Pipeline:
             conn.close()
             self.metrics.duration("snapshot", time.monotonic() - observed_at)
 
+    def _session_marker(self, guild: str) -> tuple[int, int]:
+        """Read only the state that can invalidate an in-flight decision."""
+        conn = self.db.connect()
+        try:
+            row = conn.execute(
+                "SELECT version,generation FROM sessions WHERE guild_id=?", (guild,)
+            ).fetchone()
+        finally:
+            conn.close()
+        if row is None:
+            raise DomainError("guild_not_allowed")
+        return int(row[0]), int(row[1])
+
     def _plan(
         self,
         actor: Actor,
@@ -377,6 +390,10 @@ class Pipeline:
                 ("지정한 이름으로 빈 목록 생성", Action.PLAYLIST_CREATE, {"name": quoted[1]})
             )
         matched = [p for p in snapshot["playlists"] if normalized_name(p["name"]) in normalized]
+        matched.sort(key=lambda p: (-len(normalized_name(p["name"])), p["normalized_name"]))
+        if len(matched) > 10 and re.search(r"틀어|재생|추가|넣어", normalized):
+            # Truncation could silently discard the intended target.
+            return "clarify", []
         if not plans and matched and re.search(r"틀어|재생", normalized):
             group = "play_request"
             target_channel = actor.bot_voice_channel_id or actor.voice_channel_id
@@ -430,22 +447,33 @@ class Pipeline:
         if not plans and re.search(r"틀어|재생", normalized):
             target_channel = actor.bot_voice_channel_id or actor.voice_channel_id
             if target_channel:
+                track_matches: list[tuple[int, dict[str, Any]]] = []
                 for track in snapshot["tracks"]:
                     names = [track["title"]] + json.loads(track["annotations_json"]).get(
                         "aliases", []
                     )
-                    if any(
-                        1 <= len(name) <= 100 and normalized_name(name) in normalized
+                    matching = [
+                        len(normalized_name(name))
                         for name in names
-                    ):
-                        group = "play_request"
-                        plans.append(
-                            (
-                                "등록 곡 " + track["title"] + " 재생",
-                                Action.TRACK_PLAY,
-                                {"track_id": track["id"], "channel_id": target_channel},
-                            )
+                        if isinstance(name, str)
+                        and 1 <= len(name) <= 100
+                        and normalized_name(name) in normalized
+                    ]
+                    if matching:
+                        track_matches.append((max(matching), track))
+                if len(track_matches) > 10:
+                    return "clarify", []
+                for _, track in sorted(
+                    track_matches, key=lambda item: (-item[0], item[1]["title"], item[1]["id"])
+                ):
+                    group = "play_request"
+                    plans.append(
+                        (
+                            "등록 곡 " + track["title"] + " 재생",
+                            Action.TRACK_PLAY,
+                            {"track_id": track["id"], "channel_id": target_channel},
                         )
+                    )
         candidates = [
             CandidatePlan(
                 Choice("c" + str(i + 1), description),
@@ -501,8 +529,11 @@ class Pipeline:
         proven_request = request_id
 
         def request_policy() -> Policy:
-            with self.db.connect() as conn:
+            conn = self.db.connect()
+            try:
                 return policy_for_request(conn, self.policy, actor, proven_request)
+            finally:
+                conn.close()
 
         started_at = started_at if started_at is not None else time.monotonic()
         if not text.strip() or len(text) > 500:
@@ -522,6 +553,15 @@ class Pipeline:
         group, candidates = self._candidates(text, actor, request_id, snapshot)
         if group == "clarify" or not candidates:
             return None
+        # Deny only when every feasible interpretation has the same permission
+        # requirement. Mixed read/write candidates still need model selection.
+        actions = {
+            c.plan.action if c.plan is not None else c.unresolved_action for c in candidates
+        }
+        if len(actions) == 1:
+            first_plan = candidates[0].plan
+            if first_plan is not None:
+                authorize(first_plan, actor, request_policy())
         expires = time.time() + max(0, 12 - (time.monotonic() - started_at))
 
         def complete(plan: ActionPlan, stage: int) -> ActionPlan:
@@ -553,10 +593,9 @@ class Pipeline:
             request_policy()  # Each dispatch rechecks the durable source/generation.
             if (self.port.provider, self.port.profile_id, self.port.config_hash) != self.binding:
                 raise DomainError("inference_profile_mismatch")
-            fresh = self._snapshot(actor.guild_id)
-            if (
-                fresh["session"]["version"] != snapshot["session"]["version"]
-                or fresh["session"]["generation"] != snapshot["session"]["generation"]
+            if self._session_marker(actor.guild_id) != (
+                snapshot["session"]["version"],
+                snapshot["session"]["generation"],
             ):
                 raise DomainError("execution_generation_conflict")
             remaining = 12 - (time.monotonic() - started_at)
