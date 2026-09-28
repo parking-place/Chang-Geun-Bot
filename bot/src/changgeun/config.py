@@ -24,6 +24,8 @@ class BotConfig:
     prefix: PrefixConfig = field(default_factory=PrefixConfig)
     youtube_audio_enabled: bool = False
     youtube_js_runtime: Path = Path("/usr/bin/node")
+    natural_parser_version: str = "v1"
+    parser_llm_fallback: str = "disabled"
 
     @classmethod
     def read(cls, path: Path) -> BotConfig:
@@ -83,6 +85,14 @@ class BotConfig:
             not isinstance(inference, dict) or inference.get("provider") != "jev-api"
         ):
             raise ValueError("active inference must use Jev API")
+        parser_version = raw["commands"].get("natural_parser_version", "v1")
+        llm_fallback = raw["commands"].get("parser_llm_fallback", "disabled")
+        if parser_version not in {"v1", "v2"} or llm_fallback not in {
+            "disabled", "gpt-5-nano"
+        } or (parser_version == "v2" and inference is None):
+            raise ValueError("invalid natural parser configuration")
+        if parser_version == "v1" and llm_fallback != "disabled":
+            raise ValueError("LLM fallback requires parser v2")
         return cls(
             database,
             policy,
@@ -93,4 +103,6 @@ class BotConfig:
             prefix,
             youtube_audio,
             Path(media.get("youtube_js_runtime", "/usr/bin/node")),
+            parser_version,
+            llm_fallback,
         )

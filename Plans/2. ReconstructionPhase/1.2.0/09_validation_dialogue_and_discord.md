@@ -75,6 +75,8 @@ entity query는 실제 범위의 목록 재조회/질문을 위한 값이며 실
 
 p9 구현 기록: `parser/validation.py`는 명령·인수·원문/목록 근거, 최신 목록 revision과 최신 actor/주시 허용을 실행 직전에 다시 검사한다. `pending.py`는 요청자·서버·채널·root에 결합한 60초 typed/300초 확인을 원자적으로 한 번만 소모하고 새 요청이 이전 대기를 교체한다. `followup.py`는 소비된 typed 답변을 대기 인수의 타입으로만 해석한다. 기본값은 초안에 인수가 실제로 빠진 때만 적용한다. 이는 아직 Discord UI/메시지 처리에 연결되지 않은 개발 코드다. 실행 결과는 [공개 실행 기록](../../../evidence/public/reconstruction-120-progress.md)을 참조한다.
 
+p12a 후속 구현에서 v2 opt-in Discord bridge가 읽기 초안을 공통 callback으로 전달하고 쓰기 초안에 300초 단회 확인 버튼을 붙였다. 원래 요청자 외 클릭은 대기를 소모하거나 버튼을 닫지 않는다. **60초 typed 질문 UI와 전체 slash/component parity는 여전히 미연결**이며 현재 개발 서비스 설정은 v1 그대로다.
+
 - [ ] R120-18/19/20과 전체 명령·후속 조작 coverage의 누락이 해소되거나 실패로 명시된다.
 - [ ] fresh auth·멱등성·원문 근거·개인 응답·주시 revocation을 우회하는 경로가 없다.
 - [ ] 11의 독립 평가와 실제 인수에 넘길 후보·fixture·잔여 결함을 STATUS에 연결한다. 부분 PASS로 정식 출시하지 않는다.

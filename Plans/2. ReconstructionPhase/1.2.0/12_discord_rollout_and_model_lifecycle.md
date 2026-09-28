@@ -43,6 +43,8 @@
 
 p12 개발 체크포인트에서 gateway CLI에 기본 비활성 `--parser-v2`와 필수 `--llm-fallback disabled|gpt-5-nano`를 추가했다. v2는 Jev API와 영속 tombstone이 있을 때만 생성하며, 기존 API1.2와 한 dispatch semaphore를 공유한다. `disabled` 경로는 OpenAI 키 없이 시작할 수 있고 GPT 프로필은 키가 없으면 시작 전 오류로 멈춘다. 인증된 health의 `parser_v2_ready`와 v2 usage를 LXC 대역에서 확인했다. 이 코드는 **활성 서비스에서 사용하지 않았고** bot의 새 자연어 진입점도 아직 연결되지 않았다. [실행 증거](../../../evidence/public/reconstruction-120-progress.md)를 참조한다.
 
+p12a 후속 개발 후보에서는 bot 설정 `natural_parser_version: v2`를 명시했을 때만 새 bridge를 사용하도록 했다. `v1`이 기본값이다. 읽기 초안은 실행 직전 검증 후 기존 slash callback에 전달하고, 쓰기는 300초 단회 preview를 거친다. 실제 서비스는 기존 설정으로 유지한다. typed 질문 UI·47명령/8후속 전수·기존 도메인 확인과의 통합·실제 Discord 인수는 아직 게이트 미충족이다.
+
 | 상황 | 전환 정책과 필수 근거 |
 | --- | --- |
 | 초기 nano 활성화 | rewrite/full_parse 각각의 실제 API·스키마·한국어·거절/timeout·usage 계약을 제한 예산에서 검증 |

@@ -74,11 +74,13 @@ class PendingStore:
             del self._items[key]
             return item
 
-    def cancel(self, token: str, *, root_id: str, actor_id: str) -> bool:
+    def cancel(self, token: str, *, root_id: str, guild_id: str,
+               channel_id: str, actor_id: str) -> bool:
         key = self._key(token)
         with self._lock:
             item = self._items.get(key)
-            if item is None or (item.root_id, item.actor_id) != (root_id, actor_id):
+            if item is None or (item.root_id, item.guild_id, item.channel_id,
+                                item.actor_id) != (root_id, guild_id, channel_id, actor_id):
                 return False
             del self._items[key]
             return True

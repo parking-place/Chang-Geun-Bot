@@ -52,6 +52,7 @@ from changgeun.domain.models import (
 from changgeun.nlp.client import GatewayClient
 from changgeun.nlp.command_registry import CommandSelector, structured_alias
 from changgeun.nlp.pipeline import Pipeline
+from changgeun.parser.contracts import ParseError
 from changgeun.providers.media import YouTubeMetadata
 from changgeun.providers.youtube import YouTubeData
 from changgeun.providers.youtube_audio import MediaResolver
@@ -149,6 +150,8 @@ def natural_failure(exc: Exception) -> tuple[str, str]:
         if code == "natural_missing_argument":
             return "missing", "대상이나 값을 특정해줘. 예: ‘운동용 목록의 세 번째 곡을 빼줘’."
         return "invalid", "요청을 실행하지 않았어. 대상과 현재 상태를 확인해줘."
+    if isinstance(exc, ParseError):
+        return "parser", "요청을 안전하게 확정하지 못했어. 더 구체적으로 말해줘."
     if isinstance(exc, httpx.HTTPStatusError):
         if exc.response.status_code == 429:
             return "busy", "자연어 요청이 혼잡해. 잠시 뒤 새로 요청하거나 슬래시 명령을 사용해줘."
@@ -698,6 +701,11 @@ class ChangGeunClient(discord.Client):
         from changgeun.discord_adapter.registry import build_service
 
         self.command_service = build_service(self.tree)
+        self.parser_v2 = None
+        if config.natural_parser_version == "v2":
+            from changgeun.discord_adapter.parser_v2 import ParserV2Bridge
+
+            self.parser_v2 = ParserV2Bridge(self)
 
     async def setup_hook(self) -> None:
         self.message_ledger.recover()
@@ -2226,6 +2234,9 @@ class ChangGeunClient(discord.Client):
                     )
             else:
                 request = interaction.request_id
+            if self.parser_v2 is not None:
+                await self.parser_v2.parse(interaction, text, actor, request)
+                return
             async def recheck() -> None:
                 fresh = await self.fresh_actor(interaction)
                 if admin_only and not fresh.manage_guild:

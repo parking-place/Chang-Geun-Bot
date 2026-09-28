@@ -11,6 +11,9 @@ permissions:
   allow_remote_voice_control: false
 commands:
   allow_mentions: true
+  # 1.2 development candidate: keep v1 until independent evaluation and Discord acceptance.
+  natural_parser_version: v1
+  parser_llm_fallback: disabled
   # 1.0.3: prefix.enabled is a deployment capability; channel list seeds DB once.
   # Dynamic watch commands do not expand the ordinary slash/mention channel policy.
   prefix:
