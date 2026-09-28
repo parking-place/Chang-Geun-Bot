@@ -1,6 +1,6 @@
 # 07. 공급자 독립 LLM 계약과 GPT-5 nano 프로필
 
-상태: **IN_PROGRESS**. strict 계약·가격예약·HTTP mock 개발시험은 완료, 실제 키/모델 접근·실비 검증과 운영 연결은 미완료다.
+상태: **IN_PROGRESS**. strict 계약·가격예약·HTTP mock과 제한된 실제 nano `rewrite/full_parse` 호출·실비 검증을 수행했다. 전수 품질·실제 Discord 운영 연결은 미완료다.
 
 [버전 개요](README.md) · [아키텍처](ARCHITECTURE.md) · [시험 추적](TEST_MATRIX.md) · [실행 상태](STATUS.md)
 
@@ -46,7 +46,7 @@
 | 구 설정 | `OPENAI_FALLBACK_MODEL`, `LLM_FALLBACK_TIMEOUT_SECONDS`, `LLM_FALLBACK_MAX_OUTPUT_TOKENS` 검출 시 충돌 오류 |
 
 환경변수와 YAML은 하나의 유효 설정으로 합친다. 비밀값 없는 설정 hash와 요청 당시 프로필을 남기며 값 변경은 검증된 재배포로 반영한다.
-GPT-5 nano의 Responses·Structured Outputs 지원은 [공식 모델 문서](https://developers.openai.com/api/docs/models/gpt-5-nano)로 확인했다. 계정별 접근 가능 여부는 향후 실호출 시험 대상이다.
+GPT-5 nano의 Responses·Structured Outputs 지원은 [공식 모델 문서](https://developers.openai.com/api/docs/models/gpt-5-nano)로 확인했고, p12e 제한 실호출에서 계정 접근을 확인했다. 최초 기본 reasoning 호출은 1024 출력 토큰이 모두 reasoning에 쓰여 incomplete였으므로 [공식 GPT-5 가이드](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5)의 `reasoning.effort=minimal`을 명시했다. 수정 후보의 합성 rewrite와 full_parse는 각각 구조화 출력 완료를 확인했다. [실행 기록](../../../evidence/public/reconstruction-120-progress.md)을 참조한다.
 Responses의 `text.format` 및 스키마 제약은 [공식 Structured Outputs 문서](https://developers.openai.com/api/docs/guides/structured-outputs)를 따른다. 형식 준수와 실행 허가는 별개다.
 
 ## 산출물

@@ -1,6 +1,6 @@
 # 11 — LXC 독립 평가와 이관·복귀 검증
 
-- 상태: **IN_PROGRESS — p11 소스/새 설치 wheel 회귀와 p12d Jev 합성2호출은 실행, 독립 평가·GPT 실호출·이관은 NOT_RUN**
+- 상태: **IN_PROGRESS — p12e 소스/새 gateway 설치 wheel 486회귀와 Jev/GPT 제한 합성호출은 실행, 독립 평가·이관은 NOT_RUN**
 - 책임: R120-27~30. 선행: 01~10의 계약·구현 후보와 제한 설정 준비.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12·13·15.15·15.16, [시험표](TEST_MATRIX.md).
 - 실행 위치: 모든 제품 lint·타입·단위/mock·통합·실제 모델·DB 시험은 DiscordBotLXC만 사용한다.
@@ -46,7 +46,7 @@
 
 ## R120-29 — 경로별 호출·지연·비용
 
-p12d의 합성2건은 새 v2 gateway에서 Jev의 실제 전송/응답과 공유 예약 640→642를 확인했다. 모호한 문장은 `__NONE__`, 명확한 재생목록 조회는 `C01`로 선택됐다. 이는 아래 경로별 지연/품질·원문 인수·GPT 비용 평가를 충족하지 않는다. GPT 실호출0, 누적 지출0/US$1이다.
+p12d의 합성2건은 새 v2 gateway에서 Jev의 실제 전송/응답과 공유 예약 640→642를 확인했다. 모호한 문장은 `__NONE__`, 명확한 재생목록 조회는 `C01`로 선택됐다. p12e에는 합성 Jev→GPT 3경로를 추가해 reasoning-only incomplete와 수정 후 rewrite/full_parse 완료를 확인했다. 공유 Jev 예약은645, GPT 예약2005/실제521 micro USD이며 사용자 상한은1,000,000 micro USD다. 이는 아래 경로별 지연/독립 품질·원문 인수/복귀 평가를 충족하지 않는다.
 
 | 측정 단위 | 기록할 값과 초기 제안 기준 |
 | --- | --- |

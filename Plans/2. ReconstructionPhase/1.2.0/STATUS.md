@@ -1,8 +1,8 @@
 # 1.2.0 진행 상태
 
-- 전체: **IN_PROGRESS — p12d gateway v2/Jev 제한 실호출까지 진행**
+- 전체: **IN_PROGRESS — p12e GPT-5 nano 제한 실호출·복구까지 진행**
 - 재개 기록: [HANDOFF](HANDOFF.md). p1·p2 체크포인트 뒤 중단한 상태를 보존하고 재개했다.
-- 제품 구현/검증: p1~p12c 후보 회귀와 p12d gateway Jev 합성2호출을 기록했다. 전체인수 미완료. GPT 실호출0·검증 누적지출상한US$1.
+- 제품 구현/검증: p1~p12c 후보 회귀와 p12d/e gateway Jev·GPT 제한 합성호출을 기록했다. 전체인수 미완료. GPT 실제 누적 US$0.000521/예약 US$0.002005, 검증 상한 US$1.
 - 현재 산출물: 사용자 명세와 목록 전달 추가 지시를 반영한12단계 계획·아키텍처·요구 배정·시험표.
 - 계획 작성 기준SHA: `474dad904466f0cce0817f7ac2527e4b86d9264c`.
 - 원본 명세 SHA256: `70bc3e9b63fbbd3b6b52589289852a7aac123baa139e57487e0d58be071f3a2c`.
@@ -17,12 +17,12 @@
 | 04 | [실제 목록·새 값](04_typed_candidates_and_resolution.md) | IN_PROGRESS | [p4 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC 6 PASS | 전체 collection/실행 직전 재검증·p6 연결 |
 | 05 | [gateway·예산](05_gateway_budget_and_api_migration.md) | IN_PROGRESS | [p5 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC 25 PASS | 실제 provider 비용상한·운영 연결·중단/원장장애 검증 |
 | 06 | [Jev 두 패스](06_jev_interpreter.md) | IN_PROGRESS | [p6 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock8 PASS | 실제Jev 품질·복수선택/전체인수 |
-| 07 | [LLM 프로필](07_llm_provider_profiles.md) | IN_PROGRESS | [p7 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock13 PASS | 실호출/실비·계정경계·전체계약 |
+| 07 | [LLM 프로필](07_llm_provider_profiles.md) | IN_PROGRESS | [p7·p12e 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC mock13 PASS·GPT 합성3호출 | 실제 rewrite/full_parse 제한계약·실비 확인; 전수품질/계정운영 미완료 |
 | 08 | [복구 전이](08_rewrite_and_fallback_orchestration.md) | IN_PROGRESS | [p8 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC14 PASS | 실제통합 전이·후보/의미 검증 |
 | 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | IN_PROGRESS | [p9·p12a/b 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 읽기·한 인수 typed·단회확인 대역PASS | 다중/의존인수·전체명령/후속·실제권한/확인 미완료 |
 | 10 | [로그·보관](10_structured_logs_and_retention.md) | IN_PROGRESS | [p10·p12c 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 opt-in 최소관측 대역PASS | bounded writer·이관/보관사본·관리자 조회 미완료 |
-| 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | IN_PROGRESS | [p11·p12d 실행](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각476 PASS; 실제 Jev 합성2호출 | 독립221·GPT 실비·격리이관/복귀 NOT_RUN |
-| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12~p12d 준비](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각485 PASS; gateway v2/LLM disabled 적용 | p11 게이트·전수·새 bot 실제 Discord 인수 NOT_RUN |
+| 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | IN_PROGRESS | [p11·p12d/e 실행](../../../evidence/public/reconstruction-120-progress.md) / source·새 gateway wheel 각486 PASS; 실제 Jev/GPT 합성호출 | 독립221·전체옵션·격리이관/복귀 NOT_RUN |
+| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12~p12e 준비](../../../evidence/public/reconstruction-120-progress.md) / gateway v2/LLM disabled 적용; GPT 제한시험 뒤 복구 | p11 게이트·전수·새 bot 실제 Discord 인수 NOT_RUN |
 
 ## 보존할 기준선과 이전 미완료
 
@@ -30,14 +30,14 @@
 
 | 기존 항목 | 확인된 기록과 제한 | 1.2.0 처리 |
 | --- | --- | --- |
-| 활성 개발 후보 | bot patch117b / gateway p12d 후보 `recon120p12dgw` | gateway만 v2/LLM disabled로 전환; bot은 기존 후보 보호 |
+| 활성 개발 후보 | bot patch117b / gateway p12e 후보 `recon120p12egw` | gateway v2/LLM disabled; bot은 기존 후보 보호 |
 | 1.1.8 patch118a | source/wheel 각369개시험, intent45/46, 미적용 | 이전 개발 근거로만 유지; 새 registry/parser 인수는11/12 |
 | 전체 명령/옵션·I01~I08 | typed continuation·선택/페이지·전체 역할/응답·독립221 미완료 | 02/04/09/11/12에 책임 이관, 과거DONE 아님 |
 | 1.1.6 | 독립 명확103/120 FAIL; 본 자료 개발용 전환 | 새 구조의 개발 회귀에 포함, 신규 잠금 정답 별도 |
 | 1.1.7 | 첫 PCM94/100 FAIL; patch117b 새100회·실제음성100/8시간·운영수명 등 미완료 | 파서 정확도로 닫지 않음. 영향받는 항목과 전체출시 게이트12에서 분리 |
 | 백업 검증 | 사용자 지정 SKIPPED | 그대로 유지. 신규 trace TTL/이관 시험을 백업PASS로 치환하지 않음 |
-| Jev 예산 | p12d 실제 합성2호출 뒤 예약642/3000, epoch single-lxc-20260928 | 동일원장/누계 보존, 추가 실호출은 별도 기록 |
-| GPT 자료 | 지정 비공개 파일에 자격정보 존재 | 인증·model 접근·실비·보관계정정책 NOT_RUN, 키값 공개/복사 없음 |
+| Jev 예산 | p12e 합성 호출 뒤 예약645/3000, epoch single-lxc-20260928 | 동일원장/누계 보존, 추가 실호출은 별도 기록 |
+| GPT 자료 | 지정 비공개 파일 자격정보로 제한 합성3호출 | 누적 예약2005·실제521 micro USD/US$1 상한. 시험 후 gateway disabled·LXC 임시 키 제거; 장기 운영·독립품질 미완료 |
 
 [1.1.8 증거](../../../evidence/public/patch-118-development-20260928.md) · [1.1.6 증거](../../../evidence/public/patch-116-development-20260928.md) · [1.1.7 증거](../../../evidence/public/patch-117-development-20260928.md)
 

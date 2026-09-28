@@ -132,10 +132,15 @@ def main() -> None:
     }
     if not all(health().get(key) == value for key, value in expected.items()):
         parser.error("existing gateway is not ready with expected binding")
-    if args.parser_v2_disabled and (
-        "--tombstones" not in argv or "--parser-v2" in argv or "--llm-fallback" in argv
-    ):
-        parser.error("v2 candidate needs old durable tombstones and no existing v2 flags")
+    if args.parser_v2_disabled:
+        if "--tombstones" not in argv:
+            parser.error("v2 candidate needs old durable tombstones")
+        current_v2 = "--parser-v2" in argv or "--llm-fallback" in argv
+        if current_v2 and not (
+            argv.count("--parser-v2") == 1 and argv.count("--llm-fallback") == 1
+            and argv[argv.index("--llm-fallback") + 1] == "disabled"
+        ):
+            parser.error("existing v2 profile must be disabled")
     before = budget()
     backup = UNIT.with_name(UNIT.name + ".before-" + args.candidate)
     if backup.exists():
@@ -144,8 +149,9 @@ def main() -> None:
     backup.chmod(0o600)
     argv[0] = str(interpreter)
     after_expected = dict(expected)
-    if args.parser_v2_disabled:
+    if args.parser_v2_disabled and not current_v2:
         argv.extend(["--parser-v2", "--llm-fallback", "disabled"])
+    if args.parser_v2_disabled:
         after_expected.update(parser_v2_ready=True, parser_llm_profile="disabled")
     lines[index] = "ExecStart=" + shlex.join(argv) + "\n"
     try:

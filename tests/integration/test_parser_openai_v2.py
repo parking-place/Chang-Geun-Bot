@@ -62,6 +62,7 @@ async def test_responses_payload_is_strict_stateless_and_single_attempt():
     assert seen[0]['store'] is False and 'tools' not in seen[0]
     assert seen[0]['model'] == 'gpt-5-nano'
     assert seen[0]['text']['format']['strict'] is True
+    assert seen[0]['reasoning'] == {'effort': 'minimal'}
     assert seen[0]['max_output_tokens'] == 1024
 
 
@@ -91,6 +92,40 @@ async def test_refusal_preserves_usage_and_durable_cost(tmp_path):
     assert book.usage('same-run')['gpt_actual_micro_usd'] > 0
     assert book.usage('same-run')['gpt_unknown_cost_calls'] == 0
     assert book.usage('same-run')['gpt_reserved_micro_usd'] < 1_000_000
+
+
+@pytest.mark.asyncio
+async def test_reasoning_only_incomplete_is_charged_without_retry(tmp_path):
+    calls_seen = 0
+
+    def route(_request):
+        nonlocal calls_seen
+        calls_seen += 1
+        return httpx.Response(200, json={
+            'status': 'incomplete', 'model': 'gpt-5-nano', 'output': [],
+            'usage': {'input_tokens': 200, 'output_tokens': 1024,
+                      'total_tokens': 1224,
+                      'output_tokens_details': {'reasoning_tokens': 1024}},
+        })
+
+    selected = profile()
+    provider = OpenAIResponsesProvider(selected, transport=httpx.MockTransport(route))
+    book = ParserLedger(Ledger(tmp_path / 'ledger.sqlite', tmp_path / 'owners.sqlite'))
+    first, rewrite = calls()
+    book.reserve(first, run_id='same-run', max_jev_run_calls=3000)
+    book.finish(first, {'ok': True})
+    router = ParserProviderRouter(None, provider)
+    service = ParserService(router, book, config_hash='c' * 64, run_id='same-run',
+                            max_jev_run_calls=3000, llm_reservation=router.quote,
+                            llm_actual=selected.actual_micro_usd)
+    try:
+        result = await service.parse(rewrite)
+    finally:
+        await provider.close()
+    assert calls_seen == 1
+    assert result['status'] == 'incomplete' and result['result'] is None
+    assert result['usage']['reasoning_tokens'] == 1024
+    assert book.usage('same-run')['gpt_actual_micro_usd'] == 420
 
 
 def test_profiles_fail_closed_and_quote_stays_below_dollar():

@@ -151,6 +151,7 @@ class OpenAIResponsesProvider:
                     "command_rewrite_v1" if call.operation == "rewrite" else "command_parse_v1"),
                 "strict": True, "schema": call.output_schema,
             }},
+            "reasoning": {"effort": "minimal"},
             "store": False, "max_output_tokens": self.profile.max_tokens(call),
         }
 
