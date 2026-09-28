@@ -1,6 +1,6 @@
 # 03 — 원문 보존·보수적 정규화·source map
 
-- 상태: **PLANNED**
+- 상태: **IN_PROGRESS — 정규화/source map 개발시험 완료, 실제 자연어 경로 연결 대기**
 - 선행: [01 계약](01_baseline_and_contracts.md), [02 등록부](02_registry_and_command_service.md).
 - 명세: 2~3절·5.3~5.4·12.5. 시험: R120-06/07.
 

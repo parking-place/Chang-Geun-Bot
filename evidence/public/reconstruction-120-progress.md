@@ -20,3 +20,9 @@
 - 닫힌 CommandService는 등록된 같은callback만 호출하며 C39재귀/권한/타입/범위/재생·import양자택일을 검증한다. 신규파서 연결은p9에 수행한다.
 - DiscordBotLXC 신규등록부+기존어댑터/자연어 회귀45 PASS, 신규파일Ruff·mypy PASS. 실제Discord 인수/전체옵션 의미정확도는 아직아니다.
 - 사용자 지정 GPT 실호출 검증 누적 지출상한 **US$1**. 예약/실패/unknown을 포함한 영속금액원장을 적용하며 추가승인없이 증액하지 않는다.
+
+## p3 — 보수적 정규화와 원문 위치 보존
+
+- 2026-09-28 사용자 재개 지시 후 p1/p2 작업 트리와 지정 DiscordBotLXC readiness를 재확인했다. 제품 API 실호출 없이 health 점검만 수행했다.
+- `InputNormalizer`는 확인된 시작 접두사만 제거하고 원문을 별도 보관한다. 정확한 기존 이름, 따옴표/닫히지 않은 인용, URL, Discord 멘션을 보호한다. 나머지 공백과 NFC에만 보수적 변환을 적용하며 각 해석 문자에 원문 code point 구간을 붙인다. 원문 인용 검증은 실패 시 닫힌다. `code.normalize` 이벤트에는 원문 없이 규칙/시간/보호 수만 보낸다.
+- 지정 LXC의 source에서 한글·복수 공백·scheme 없는 YouTube URL·멘션·조합형 한글·이모지·반복값·500회 무작위 Unicode 범위 시험 등 신규10 PASS, mypy PASS. 실제 Discord 연결과 원문값의 의미 검증은 p4/p9에서 계속한다. 모델 호출0.

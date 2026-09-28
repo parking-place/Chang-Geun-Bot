@@ -1,7 +1,8 @@
 # 1.2.0 진행 상태
 
-- 전체: **IN_PROGRESS — 사용자 요청으로 단계별 구현·GitHub 체크포인트 시작**
-- 제품 구현/검증: p1 계약 구현·LXC 제한검증, 전체인수 미완료.
+- 전체: **IN_PROGRESS — 사용자 재개 지시로 p3부터 진행**
+- 재개 기록: [HANDOFF](HANDOFF.md). p1·p2 체크포인트 뒤 중단한 상태를 보존하고 재개했다.
+- 제품 구현/검증: p1 계약3시험·p2 등록부/기존경로45회귀 LXC PASS, 전체인수 미완료. GPT 실호출0·검증 누적지출상한US$1.
 - 현재 산출물: 사용자 명세와 목록 전달 추가 지시를 반영한12단계 계획·아키텍처·요구 배정·시험표.
 - 계획 작성 기준SHA: `474dad904466f0cce0817f7ac2527e4b86d9264c`.
 - 원본 명세 SHA256: `70bc3e9b63fbbd3b6b52589289852a7aac123baa139e57487e0d58be071f3a2c`.
@@ -12,7 +13,7 @@
 | --- | --- | --- | --- | --- |
 | 01 | [기준선·계약](01_baseline_and_contracts.md) | IN_PROGRESS | [p1 실행](../../../evidence/public/reconstruction-120-progress.md) | 계약3시험PASS; 전수대응은p2와연결 |
 | 02 | [등록부·서비스](02_registry_and_command_service.md) | IN_PROGRESS | [p2 실행](../../../evidence/public/reconstruction-120-progress.md) |47개등록부·45회귀PASS, 신규연결p9 |
-| 03 | [정규화·원문](03_normalizer_and_provenance.md) | PLANNED | — / NOT_RUN | 보호구간·source map |
+| 03 | [정규화·원문](03_normalizer_and_provenance.md) | IN_PROGRESS | [p3 실행](../../../evidence/public/reconstruction-120-progress.md) / LXC 단위10 PASS | 새 Discord 경로와 원문값 검증 연결은p4/p9 |
 | 04 | [실제 목록·새 값](04_typed_candidates_and_resolution.md) | PLANNED | — / NOT_RUN | 목록 완전성/소속·원문값 추출 |
 | 05 | [gateway·예산](05_gateway_budget_and_api_migration.md) | PLANNED | — / NOT_RUN | 신규 계약·원자 예약·취소 |
 | 06 | [Jev 두 패스](06_jev_interpreter.md) | PLANNED | — / NOT_RUN | 묶음질문·조회의존3차 |
