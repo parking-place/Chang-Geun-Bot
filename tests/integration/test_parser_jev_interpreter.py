@@ -91,6 +91,57 @@ async def test_two_questions_then_batched_arguments_use_full_actual_list(tmp_pat
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('target,text,expected', [
+    ('목록', '운동 틀어줘', 'p0'),
+    ('곡', 'RED 틀어줘', 't'),
+])
+async def test_playback_uses_one_strong_actual_target_despite_weak_optional_answers(
+    tmp_path, target, text, expected,
+):
+    db, _, actor, policy = setup(tmp_path)
+    spec = CommandSpec('C23', '재생', '곡 또는 저장 목록 재생', (
+        ArgumentSpec('곡', 'string', False, source='collection', collection='tracks'),
+        ArgumentSpec('목록', 'string', False, source='collection', collection='playlists'),
+        ArgumentSpec('검색어', 'string', False),
+    ), 'dj', 'write')
+
+    async def noop(_entry, _args):
+        raise AssertionError('parser must not execute')
+
+    class PlaybackModel(Model):
+        async def call(self, operation, state, **kwargs):
+            if operation == 'command_select':
+                assert len(state['known_entities']['playlists']) == 12
+                assert len(state['known_entities']['tracks']) == 1
+                assert {row['name'] for row in state['known_entities']['playlists']} == {
+                    '운동', *(f'그외{n}' for n in range(1, 12))}
+            result = await super().call(operation, state, **kwargs)
+            if operation == 'argument_select':
+                for key, answer in result['answers'].items():
+                    if key == 'arg_' + target:
+                        criterion = kwargs['questions'][key]['criteria']
+                        chosen = next(k for k, v in criterion.items()
+                                      if (target == '목록' and '운동' in v)
+                                      or (target == '곡' and 'RED' in v))
+                        answer['choice'] = chosen
+                        answer['probabilities'] = {
+                            k: 0.96 if k == chosen else 0.04 / (len(criterion) - 1)
+                            for k in criterion}
+                    else:
+                        answer['confidence'] = 0.38
+            return result
+
+    model = PlaybackModel(command='C23')
+    view = InputNormalizer().normalize('!!창근아 ' + text, invocation='!!창근아')
+    result = await JevInterpreter(
+        CommandService({'C23': spec}, {'C23': noop}), model, db, policy,
+    ).interpret(view, actor, root_id='playback', pass_id='initial', scope_hash='scope')
+    assert result.status == 'parsed'
+    assert result.draft.arguments == {target: expected}
+    assert [call[0] for call in model.calls] == ['command_select', 'argument_select']
+
+
+@pytest.mark.asyncio
 async def test_dependent_entry_lookup_requires_third_stage(tmp_path):
     db, service, actor, policy = setup(tmp_path)
     model = Model(command='C12')
@@ -175,4 +226,50 @@ async def test_short_voice_join_uses_slash_default_channel(tmp_path, utterance):
     result = await JevInterpreter(service, model, db, policy).interpret(
         view, actor, root_id='voice-root', pass_id='initial', scope_hash='scope')
     assert result.status == 'parsed' and result.draft.arguments == {}
+    assert [call[0] for call in model.calls] == ['command_select']
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('utterance,expected', [
+    ('퇴장해', 'parsed'), ('나가', 'parsed'), ('나가라고 했어', 'failed'),
+])
+async def test_short_voice_leave_is_request_after_jev_selects_leave(
+    tmp_path, utterance, expected,
+):
+    db = Database(tmp_path / 'voice.sqlite')
+    db.ensure_guild('g')
+    spec = CommandSpec('C22', '퇴장', '현재 음성채널 퇴장', (), 'dj', 'write')
+
+    async def noop(_entry, _args):
+        raise AssertionError('parser must not execute')
+
+    service = CommandService({'C22': spec}, {'C22': noop})
+    actor = Actor('g', 'u', frozenset({'dj'}), 'text', voice_channel_id='voice')
+    policy = Policy(frozenset({'g'}), frozenset({'dj'}), frozenset(),
+                    frozenset({'voice'}))
+
+    class WeakKindModel(Model):
+        async def call(self, operation, state, *, pass_id=None, stage_index=None,
+                       questions=None, output_schema=None):
+            result = await super().call(operation, state, pass_id=pass_id,
+                                        stage_index=stage_index, questions=questions,
+                                        output_schema=output_schema)
+            result['answers']['input_kind'] = {
+                'type': 'choice', 'choice': 'not_request', 'confidence': .34,
+                'probabilities': {'single': .27, 'multiple': .11,
+                                  'not_request': .51, 'unclear': .11},
+            }
+            result['answers']['command'] = {
+                'type': 'choice', 'choice': 'C22', 'confidence': .79,
+                'probabilities': {'C22': .8, '__NONE__': .2},
+            }
+            return result
+
+    model = WeakKindModel(command='C22')
+    view = InputNormalizer().normalize(utterance)
+    result = await JevInterpreter(service, model, db, policy).interpret(
+        view, actor, root_id='voice-root', pass_id='initial', scope_hash='scope')
+    assert result.status == expected
+    if expected == 'parsed':
+        assert result.draft.command_id == 'C22'
     assert [call[0] for call in model.calls] == ['command_select']
