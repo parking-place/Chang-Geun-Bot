@@ -57,6 +57,7 @@ ARGUMENTS: dict[Action, tuple[set[str], set[str]]] = {
     Action.TRACK_PLAY: ({"track_id", "channel_id"}, {"entry_id"}),
     Action.CATALOG_REGISTER: ({"source_type", "external_id", "title"}, {"metadata"}),
     Action.CATALOG_SEARCH: ({"query"}, set()),
+    Action.HISTORY_LIST: (set(), set()),
     Action.CATALOG_ANNOTATE: ({"track_id", "aliases", "tags"}, {"creator"}),
     Action.QUEUE_ENQUEUE: ({"track_ids"}, {"allow_duplicates"}),
     Action.QUEUE_REMOVE: ({"entry_id"}, set()),
@@ -715,6 +716,20 @@ class Executor:
                     for r in rows
                     if query in normalized_name(r["title"])
                     or query in normalized_name(r["annotations_json"])
+                ]
+            }
+        if action == Action.HISTORY_LIST:
+            return {
+                "history": [
+                    dict(row)
+                    for row in conn.execute(
+                        "SELECT h.rowid AS history_id,h.track_id,h.played_at,t.title "
+                        "FROM playback_history h JOIN tracks t "
+                        "ON t.guild_id=h.guild_id AND t.id=h.track_id "
+                        "WHERE h.guild_id=? AND h.played_at>=? "
+                        "ORDER BY h.played_at DESC,h.rowid DESC LIMIT 100",
+                        (guild, self.clock() - 30 * 86400),
+                    )
                 ]
             }
         if action == Action.CATALOG_ANNOTATE:

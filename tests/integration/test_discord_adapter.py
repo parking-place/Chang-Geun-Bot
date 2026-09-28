@@ -1,4 +1,5 @@
 import asyncio
+import time
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -109,6 +110,41 @@ def test_role_and_channel_help_does_not_expose_management_or_other_channels(clie
     )
 
 
+def test_recent_history_is_thirty_days_capped_at_one_hundred_and_readable(client):
+    actor = Actor("1", "10", frozenset({"2"}), "3", "4", "4")
+    track = client.executor.execute(
+        client.make_plan(
+            actor,
+            "history-track",
+            Action.CATALOG_REGISTER,
+            {"source_type": "approved_audio", "external_id": "history", "title": "같은 제목"},
+        ),
+        actor,
+    )["track_id"]
+    now = time.time()
+    with client.db.transaction() as conn:
+        for number in range(105):
+            conn.execute(
+                "INSERT INTO playback_history VALUES(?,?,?,?)",
+                (
+                    "1",
+                    f"entry-{number}",
+                    track,
+                    now - number if number < 100 else now - 31 * 86400,
+                ),
+            )
+    guest = replace(actor, role_ids=frozenset())
+    result = client.executor.execute(
+        client.make_plan(guest, "history-list", Action.HISTORY_LIST, {}), guest
+    )
+    assert len(result["history"]) == 100
+    assert result["history"][0]["track_id"] == track
+    assert len({row["history_id"] for row in result["history"]}) == 100
+    page = PageView(client, guest, Action.HISTORY_LIST, {}, result)
+    assert "총 100건" in page.render()
+    assert any(item.label == "최근곡 재생" for item in page.children)
+
+
 @pytest.mark.asyncio
 async def test_read_pages_bind_actor_and_reject_changed_snapshot(client):
     actor = await client.fresh_actor(interaction())
@@ -128,6 +164,10 @@ async def test_read_pages_bind_actor_and_reject_changed_snapshot(client):
     current = interaction(103, component=True)
     await page.move(current, 1)
     assert page.page == 1 and "2/3페이지" in current.events[-1]["content"]
+    # The button's freshness read must not consume the mutation interaction ID.
+    client.executor.execute(
+        client.make_plan(actor, "103", Action.PLAYLIST_CREATE, {"name": "새 목록"}), actor
+    )
     with client.db.transaction() as conn:
         conn.execute("UPDATE playlists SET deleted_at=1 WHERE id='list-0'")
     current = interaction(104, component=True)

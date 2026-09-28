@@ -108,6 +108,7 @@ def main() -> None:
     resource.setrlimit(resource.RLIMIT_FSIZE, (1048576, 1048576))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     socket.getaddrinfo = PinnedDNS().resolve  # type: ignore[assignment]
+    header_sent = False
     try:
         raw = json.loads(sys.stdin.buffer.read(1024))
         identifier, node = raw["id"], raw["node"]
@@ -127,6 +128,7 @@ def main() -> None:
         # Only bounded, nonsecret metadata leaves the extractor process.
         sys.stdout.buffer.write(json.dumps({"duration": info["duration"]}).encode() + b"\n")
         sys.stdout.buffer.flush()
+        header_sent = True
         opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}),
             NoRedirect(),
@@ -187,6 +189,12 @@ def main() -> None:
             thread.join(timeout=2)
             if thread.is_alive() or process.wait(timeout=2) != 0 or errors:
                 raise DomainError("youtube_stream_failed")
+    except DomainError as exc:
+        if not header_sent and exc.code in {"youtube_unavailable", "youtube_unsupported"}:
+            # A fixed code is safe to return; upstream text or media URLs are not.
+            sys.stdout.buffer.write(json.dumps({"error": exc.code}).encode() + b"\n")
+            sys.stdout.buffer.flush()
+        os._exit(2)
     except Exception:
         # Never emit exceptions containing signed media URLs or upstream bodies.
         os._exit(2)

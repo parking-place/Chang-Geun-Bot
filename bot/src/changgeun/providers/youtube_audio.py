@@ -187,10 +187,15 @@ class MediaResolver(ApprovedAudioResolver):
                         if len(header) > 1024:
                             raise DomainError("youtube_invalid_response")
                         metadata: dict[str, Any] = json.loads(header)
+                        if metadata.get("error") in {"youtube_unavailable", "youtube_unsupported"}:
+                            raise DomainError(metadata["error"])
                         if not 0 < metadata["duration"] <= 1800:
                             raise DomainError("youtube_unsupported")
                     async with asyncio.timeout(10):
-                        first = await process.stdout.readexactly(3840)
+                        try:
+                            first = await process.stdout.readexactly(3840)
+                        except asyncio.IncompleteReadError:
+                            raise DomainError("youtube_first_pcm_failed") from None
                     source.frames.put_nowait(first)
                     source.task = asyncio.create_task(source.pump())
                     self.sources.add(source)
@@ -206,6 +211,14 @@ class MediaResolver(ApprovedAudioResolver):
             if source:
                 await source.aclose()
             raise
+        except DomainError:
+            if source:
+                await source.aclose()
+            raise
+        except TimeoutError:
+            if source:
+                await source.aclose()
+            raise DomainError("youtube_prepare_timeout") from None
         except Exception:
             if source:
                 await source.aclose()

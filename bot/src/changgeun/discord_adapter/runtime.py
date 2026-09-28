@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -33,6 +34,34 @@ class AudioRuntime:
         self.empty_since: dict[str, float] = {}
         self.state_since: dict[str, tuple[PlaybackState, float]] = {}
         self.preparing: dict[str, asyncio.Task[Any]] = {}
+        self.failure_counts: Counter[str] = Counter()
+        self.last_failure: dict[str, tuple[str, float]] = {}
+
+    @staticmethod
+    def failure_advice(code: str) -> tuple[str, str]:
+        if code in {"youtube_unsupported", "youtube_unavailable"}:
+            return "unsupported", "영상이 재생 지원 조건에 맞지 않아. 다른 공개 영상을 선택해줘."
+        if code in {"youtube_prepare_timeout", "media_capacity"}:
+            return "preparation", "오디오 준비가 지연됐어. 잠시 뒤 다른 곡을 요청해줘."
+        if code in {
+            "youtube_first_pcm_failed",
+            "youtube_prepare_failed",
+            "youtube_stream_failed",
+            "youtube_stream_timeout",
+        }:
+            return "media", "오디오를 시작하지 못했어. 다른 곡을 선택해줘."
+        if code == "voice_not_connected":
+            return "voice", "음성 연결이 끊겼어. /입장으로 다시 연결해줘."
+        return "unknown", "재생을 완료하지 못했어. /대기열 보기로 상태를 확인해줘."
+
+    async def record_failure(self, guild: str, code: str) -> None:
+        category, advice = self.failure_advice(code)
+        self.failure_counts[category] += 1
+        self.last_failure[guild] = (advice, time.time())
+        try:
+            await self.notify(guild, advice)
+        except Exception:
+            pass  # A notification failure must not strand the playback transition.
 
     def recover(self, guild_ids: frozenset[str]) -> None:
         with self.db.transaction() as conn:
@@ -279,6 +308,7 @@ class AudioRuntime:
                     if not admission_valid(conn, guild_id, entry_id):
                         raise DomainError("watch_admission_expired")
                     voice.play(source, after=after)
+                    self.last_failure.pop(guild_id, None)
                     conn.execute(
                         "UPDATE audio_admissions SET started=1 WHERE guild_id=? AND entry_id=?",
                         (guild_id, entry_id),
@@ -295,9 +325,11 @@ class AudioRuntime:
             }:
                 await self.expired(guild_id, generation)
             else:
-                await self._finished(guild_id, generation, failed=True)
+                await self.record_failure(guild_id, exc.code)
+                await self._finished(guild_id, generation, failed=True, reported=True)
         except Exception:
-            await self._finished(guild_id, generation, failed=True)
+            await self.record_failure(guild_id, "unknown")
+            await self._finished(guild_id, generation, failed=True, reported=True)
         finally:
             if self.preparing.get(guild_id) is asyncio.current_task():
                 self.preparing.pop(guild_id, None)
@@ -317,7 +349,9 @@ class AudioRuntime:
         if start_next:
             await self._start_audio(guild, next_generation)
 
-    async def _finished(self, guild: str, generation: int, *, failed: bool) -> None:
+    async def _finished(
+        self, guild: str, generation: int, *, failed: bool, reported: bool = False
+    ) -> None:
         with self.db.transaction() as conn:
             session = load_session(conn, guild)
             completed_entry = session.current
@@ -334,6 +368,8 @@ class AudioRuntime:
             next_generation = session.generation
             retry_or_next = session.state == PlaybackState.RESOLVING
             stopped = session.failed_tracks >= 3
+        if failed and not reported:
+            await self.record_failure(guild, "unknown")
         if stopped:
             await self.notify(guild, "세 곡 연속 재생에 실패해서 멈췄어. /대기열 보기로 확인해줘.")
         if retry_or_next:

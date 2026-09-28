@@ -71,10 +71,10 @@ snapshot/버튼/승인 회귀와 실제 Discord 페이지·단건 재승인·현
 | P113-01 | 빈 목록·긴 한글 제목·25건 초과 제안·다중 페이지 | PARTIAL — 26목록·27제안 페이지 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
 | P113-02 | 페이지 사이 삭제·이동·동명 곡·snapshot 만료 | PARTIAL — 삭제 snapshot 거절 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
 | P113-03 | 타인 버튼·DJ 회수·정적/동적 채널·주시 제거 | PARTIAL — 타인 페이지 거절 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
-| P113-04 | 만료 단건 재승인·동일 버튼 재전송·끄기/켜기 | PARTIAL — 같은 곡 2개 중 entry ID 한 건 재승인 DB PASS | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
+| P113-04 | 만료 단건 재승인·동일 버튼 재전송·끄기/켜기 | PARTIAL — 1.1.3 실제 선택 FAIL, 1.1.4 수정 후 사용자 정상 확인; 경합 전 | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
 | P113-05 | 현재곡 준비/재생/일시정지·반복·다음 승인 만료 | PARTIAL — 연결 안 됨/볼륨 기본 상태 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
 | P113-06 | 조회·버튼의 호출/개인정보, 준비 중 취소 경합 | NOT_RUN | — |
-| P113-07 | 실제 Discord 조작과 후보 복귀 | PARTIAL — 고정 후보 적용·Jev 개발37/37, 조작/복귀 미실행 | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
+| P113-07 | 실제 Discord 조작과 후보 복귀 | PARTIAL — 사용자 4개 화면 정상, 만료 선택 처음 FAIL/수정 확인; 복귀 미실행 | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
 
 ## 1.1.4
 
@@ -84,13 +84,13 @@ snapshot/버튼/승인 회귀와 실제 Discord 페이지·단건 재승인·현
 
 | ID | 시험 시나리오 | 결과 | 새 실행 증거 |
 | --- | --- | --- | --- |
-| P114-01 | 지원 제외·resolver/네트워크/FFmpeg/PCM/음성 실패 주입 | NOT_RUN | — |
-| P114-02 | 같은 고정20영상×5 첫 PCM | NOT_RUN | — |
-| P114-03 | 실제 안내와 준비/재생/권한/승인 만료 상태 | NOT_RUN | — |
-| P114-04 | 완료·중단·실패·넘기기·반복·늦은 완료 callback | NOT_RUN | — |
-| P114-05 | 최근30일/최대100건·페이지·동일 제목·삭제된 곡 | NOT_RUN | — |
-| P114-06 | 최근곡 재요청·기존 목록 추가/제안 안내·DJ/음성 회수·버튼 재전송 | NOT_RUN | — |
-| P114-07 | 실제 사용자 핵심 청취/안내와 후보 복귀 | NOT_RUN | — |
+| P114-01 | 지원 제외·resolver/네트워크/FFmpeg/PCM/음성 실패 주입 | PARTIAL | [안전 문구/기본 분류 회귀](../../evidence/public/patch-114-development-20260928.md); 전 구간 오류 주입 전 |
+| P114-02 | 같은 고정20영상×5 첫 PCM | PASS — 첫 PCM95/100, 성공p95 4.458초; 실제 음성 별도 | [1.1.4 고정 후보 기록](../../evidence/public/patch-114-development-20260928.md) |
+| P114-03 | 실제 안내와 준비/재생/권한/승인 만료 상태 | PARTIAL | [안전 문구 회귀](../../evidence/public/patch-114-development-20260928.md); 실제 실패 안내 전 |
+| P114-04 | 완료·중단·실패·넘기기·반복·늦은 완료 callback | PARTIAL | [이력 조회/실패 분류 회귀](../../evidence/public/patch-114-development-20260928.md); 모든 경합 전 |
+| P114-05 | 최근30일/최대100건·페이지·동일 제목·삭제된 곡 | PARTIAL | [조회 범위 회귀](../../evidence/public/patch-114-development-20260928.md); 전체 변형 전 |
+| P114-06 | 최근곡 재요청·기존 목록 추가/제안 안내·DJ/음성 회수·버튼 재전송 | PARTIAL | [선택 구조 구현](../../evidence/public/patch-114-development-20260928.md); 실제 선택/권한 경합 전 |
+| P114-07 | 실제 사용자 핵심 청취/안내와 후보 복귀 | NOT_RUN | 완료 이력이 없어 실제 최근곡 재생 미실행; 만료곡 선택 수정만 사용자 확인 |
 
 ## 1.1.5
 

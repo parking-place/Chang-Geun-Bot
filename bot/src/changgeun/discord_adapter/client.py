@@ -12,6 +12,7 @@ import sqlite3
 import time
 from collections import Counter
 from dataclasses import replace
+from datetime import UTC, datetime
 from typing import Any
 
 import discord
@@ -263,6 +264,12 @@ class PageView(discord.ui.View):
         self.arguments, self.result = arguments, result
         self.fingerprint = digest(result)
         self.page = 0
+        for item in tuple(self.children):
+            label = getattr(item, "label", None)
+            if (label == "만료 곡 선택" and action != Action.QUEUE_SHOW) or (
+                label == "최근곡 재생" and action != Action.HISTORY_LIST
+            ):
+                self.remove_item(item)
 
     def rows(self) -> list[str]:
         if self.action == Action.PLAYLIST_LIST:
@@ -273,6 +280,13 @@ class PageView(discord.ui.View):
             return [
                 f"{safe(row['id'])[:40]}: {safe(row['title'])[:90]} → {safe(row['name'])[:40]}"
                 for row in self.result["proposals"]
+            ]
+        if self.action == Action.HISTORY_LIST:
+            return [
+                datetime.fromtimestamp(row["played_at"], UTC).strftime("%m-%d %H:%M UTC")
+                + " · "
+                + safe(row["title"])[:115]
+                for row in self.result["history"]
             ]
         return [
             f"{index + 1}. {safe(row['title'])[:120]} · {row['approval']}"
@@ -288,6 +302,7 @@ class PageView(discord.ui.View):
             Action.CATALOG_SEARCH: "검색 결과",
             Action.PROPOSAL_LIST: "대기 중인 제안",
             Action.QUEUE_SHOW: "대기열",
+            Action.HISTORY_LIST: "최근 완료곡",
         }[self.action]
         if self.action == Action.QUEUE_SHOW:
             title = self.result["session"].get("current_title") or "없어"
@@ -305,7 +320,9 @@ class PageView(discord.ui.View):
         ) != (self.actor.user_id, self.actor.guild_id, self.actor.text_channel_id):
             raise DomainError("identity_mismatch")
         actor = await self.client.fresh_actor(interaction)
-        plan = self.client.make_plan(actor, str(interaction.id), self.action, self.arguments)
+        plan = self.client.make_plan(
+            actor, str(interaction.id) + ".page-read", self.action, self.arguments
+        )
         if digest(self.client.executor.execute(plan, actor)) != self.fingerprint:
             raise DomainError("version_conflict")
         return actor
@@ -362,6 +379,30 @@ class PageView(discord.ui.View):
             ephemeral=True,
         )
 
+    @discord.ui.button(label="최근곡 재생", style=discord.ButtonStyle.primary)
+    async def replay(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        if self.action != Action.HISTORY_LIST:
+            return
+        try:
+            await self.fresh_result(interaction)
+        except DomainError:
+            await interaction.response.send_message(
+                "권한이나 기록이 바뀌었어. 다시 조회해줘.", ephemeral=True
+            )
+            return
+        rows = self.result["history"][self.page * 10 : self.page * 10 + 10]
+        if not rows:
+            await interaction.response.send_message("이 페이지에 최근곡이 없어.", ephemeral=True)
+            return
+        await interaction.response.send_message(
+            "재생할 완료곡을 선택하면 새 재생 요청이야. "
+            "목록 저장은 /곡 추가 또는 /곡제안을 이용해줘.",
+            view=HistorySelection(self, rows),
+            ephemeral=True,
+        )
+
 
 class ExpiredSelection(discord.ui.View):
     def __init__(self, page: PageView, rows: list[dict[str, Any]]) -> None:
@@ -405,6 +446,51 @@ class ExpiredSelection(discord.ui.View):
             except DomainError:
                 await interaction.response.send_message(
                     "항목·권한·음성 상태가 바뀌었어. 다시 조회해줘.", ephemeral=True
+                )
+
+        self.add_item(picker)
+
+
+class HistorySelection(discord.ui.View):
+    def __init__(self, page: PageView, rows: list[dict[str, Any]]) -> None:
+        super().__init__(timeout=60)
+        self.page, self.rows = page, {str(row["history_id"]): row for row in rows}
+
+        class Picker(discord.ui.Select[Any]):
+            async def callback(self, interaction: discord.Interaction) -> None:
+                await select_history(interaction)
+
+        picker = Picker(
+            placeholder="새로 재생 요청할 완료곡",
+            options=[
+                discord.SelectOption(
+                    label=str(row["title"])[:100], value=str(row["history_id"])
+                )
+                for row in rows
+            ],
+        )
+
+        async def select_history(interaction: discord.Interaction) -> None:
+            try:
+                actor = await page.fresh_result(interaction)
+                row = self.rows.get(picker.values[0])
+                if row is None:
+                    raise DomainError("version_conflict")
+                target = actor.bot_voice_channel_id or actor.voice_channel_id
+                if target is None:
+                    raise DomainError("same_voice_required")
+                plan = page.client.make_plan(
+                    actor,
+                    str(interaction.id),
+                    Action.TRACK_PLAY,
+                    {"track_id": row["track_id"], "channel_id": target},
+                    origin="button",
+                )
+                await page.client.submit_plan(interaction, plan, actor=actor)
+                self.stop()
+            except DomainError:
+                await interaction.response.send_message(
+                    "곡·권한·음성 상태가 바뀌었어. 다시 조회해줘.", ephemeral=True
                 )
 
         self.add_item(picker)
@@ -919,6 +1005,7 @@ class ChangGeunClient(discord.Client):
                     Action.CATALOG_SEARCH,
                     Action.QUEUE_SHOW,
                     Action.PROPOSAL_LIST,
+                    Action.HISTORY_LIST,
                 }
                 and not isinstance(interaction, MentionEntry)
                 and interaction.type != discord.InteractionType.component
@@ -1000,6 +1087,8 @@ class ChangGeunClient(discord.Client):
                 )
                 or "없어."
             )
+        if action == Action.HISTORY_LIST:
+            return "최근 완료곡은 /최근곡에서 확인해줘."
         if action == Action.PROPOSAL_CREATE:
             return "제안을 보냈어. DJ가 승인하면 목록에 추가돼."
         if action == Action.PLAYLIST_GENERATE:
@@ -1316,6 +1405,10 @@ class ChangGeunClient(discord.Client):
         @tree.command(name="제안함", description="DJ가 대기 중인 곡 제안 조회")
         async def list_proposals(interaction: discord.Interaction) -> None:
             await self.submit(interaction, Action.PROPOSAL_LIST)
+
+        @tree.command(name="최근곡", description="최근 30일 완료된 곡 최대 100건 보기")
+        async def recent(interaction: discord.Interaction) -> None:
+            await self.submit(interaction, Action.HISTORY_LIST)
 
         @tree.command(
             name="되돌리기", description="변경되지 않은 목록·큐 편집 하나를 확인 후 되돌려"
@@ -1739,6 +1832,12 @@ class ChangGeunClient(discord.Client):
                 (row["title"] for row in result["entries"] if row["approval"] == "승인됨"),
                 "없어",
             )
+            recent_failure = self.audio.last_failure.get(actor.guild_id)
+            failure_line = (
+                "\n최근 실패: " + recent_failure[0]
+                if recent_failure and time.time() - recent_failure[1] <= 300
+                else ""
+            )
             await interaction.followup.send(
                 "현재곡: "
                 + safe(state.get("current_title") or "없어")[:120]
@@ -1748,7 +1847,8 @@ class ChangGeunClient(discord.Client):
                 + "\n다음 승인 곡: "
                 + safe(following)[:120]
                 + "\n원본: "
-                + source,
+                + source
+                + failure_line,
                 view=PlaybackView(self),
                 ephemeral=True,
             )

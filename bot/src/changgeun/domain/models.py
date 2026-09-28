@@ -41,6 +41,7 @@ class Action(StrEnum):
     QUEUE_SHOW = "queue.show"
     CATALOG_REGISTER = "catalog.register"
     CATALOG_SEARCH = "catalog.search"
+    HISTORY_LIST = "history.list"
     CATALOG_ANNOTATE = "catalog.annotate"
     PROPOSAL_CREATE = "proposal.create"
     PROPOSAL_APPROVE = "proposal.approve"
@@ -66,6 +67,7 @@ READ_ACTIONS = frozenset(
         Action.PLAYLIST_LIST,
         Action.PLAYLIST_EXPORT,
         Action.CATALOG_SEARCH,
+        Action.HISTORY_LIST,
         Action.QUEUE_SHOW,
         Action.PROPOSAL_LIST,
     }
