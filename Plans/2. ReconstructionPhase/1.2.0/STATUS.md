@@ -1,8 +1,8 @@
 # 1.2.0 진행 상태
 
-- 전체: **IN_PROGRESS — 사용자 재개 지시로 p3부터 진행**
+- 전체: **IN_PROGRESS — p12d gateway v2/Jev 제한 실호출까지 진행**
 - 재개 기록: [HANDOFF](HANDOFF.md). p1·p2 체크포인트 뒤 중단한 상태를 보존하고 재개했다.
-- 제품 구현/검증: p1 계약3시험·p2 등록부/기존경로45회귀 LXC PASS, 전체인수 미완료. GPT 실호출0·검증 누적지출상한US$1.
+- 제품 구현/검증: p1~p12c 후보 회귀와 p12d gateway Jev 합성2호출을 기록했다. 전체인수 미완료. GPT 실호출0·검증 누적지출상한US$1.
 - 현재 산출물: 사용자 명세와 목록 전달 추가 지시를 반영한12단계 계획·아키텍처·요구 배정·시험표.
 - 계획 작성 기준SHA: `474dad904466f0cce0817f7ac2527e4b86d9264c`.
 - 원본 명세 SHA256: `70bc3e9b63fbbd3b6b52589289852a7aac123baa139e57487e0d58be071f3a2c`.
@@ -21,8 +21,8 @@
 | 08 | [복구 전이](08_rewrite_and_fallback_orchestration.md) | IN_PROGRESS | [p8 실행](../../../evidence/public/reconstruction-120-progress.md) / 관련 LXC14 PASS | 실제통합 전이·후보/의미 검증 |
 | 09 | [검증·Discord](09_validation_dialogue_and_discord.md) | IN_PROGRESS | [p9·p12a/b 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 읽기·한 인수 typed·단회확인 대역PASS | 다중/의존인수·전체명령/후속·실제권한/확인 미완료 |
 | 10 | [로그·보관](10_structured_logs_and_retention.md) | IN_PROGRESS | [p10·p12c 실행](../../../evidence/public/reconstruction-120-progress.md) / v2 opt-in 최소관측 대역PASS | bounded writer·이관/보관사본·관리자 조회 미완료 |
-| 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | IN_PROGRESS | [p11 실행](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각476 PASS | 독립221·실호출비용·격리이관/복귀 NOT_RUN |
-| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12·p12a/b/c 준비](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각485 PASS | p11 게이트·전수·실제 Discord 인수·전환 NOT_RUN |
+| 11 | [LXC 평가·이관](11_lxc_evaluation_and_migration.md) | IN_PROGRESS | [p11·p12d 실행](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각476 PASS; 실제 Jev 합성2호출 | 독립221·GPT 실비·격리이관/복귀 NOT_RUN |
+| 12 | [실제 인수·전환](12_discord_rollout_and_model_lifecycle.md) | IN_PROGRESS | [p12~p12d 준비](../../../evidence/public/reconstruction-120-progress.md) / source·wheel 각485 PASS; gateway v2/LLM disabled 적용 | p11 게이트·전수·새 bot 실제 Discord 인수 NOT_RUN |
 
 ## 보존할 기준선과 이전 미완료
 
@@ -30,13 +30,13 @@
 
 | 기존 항목 | 확인된 기록과 제한 | 1.2.0 처리 |
 | --- | --- | --- |
-| 활성 개발 후보 | 기록상 bot patch117b / gateway patch116g | 01에서 재확인,12 전환까지 기존 후보 보호 |
+| 활성 개발 후보 | bot patch117b / gateway p12d 후보 `recon120p12dgw` | gateway만 v2/LLM disabled로 전환; bot은 기존 후보 보호 |
 | 1.1.8 patch118a | source/wheel 각369개시험, intent45/46, 미적용 | 이전 개발 근거로만 유지; 새 registry/parser 인수는11/12 |
 | 전체 명령/옵션·I01~I08 | typed continuation·선택/페이지·전체 역할/응답·독립221 미완료 | 02/04/09/11/12에 책임 이관, 과거DONE 아님 |
 | 1.1.6 | 독립 명확103/120 FAIL; 본 자료 개발용 전환 | 새 구조의 개발 회귀에 포함, 신규 잠금 정답 별도 |
 | 1.1.7 | 첫 PCM94/100 FAIL; patch117b 새100회·실제음성100/8시간·운영수명 등 미완료 | 파서 정확도로 닫지 않음. 영향받는 항목과 전체출시 게이트12에서 분리 |
 | 백업 검증 | 사용자 지정 SKIPPED | 그대로 유지. 신규 trace TTL/이관 시험을 백업PASS로 치환하지 않음 |
-| Jev 예산 | 마지막 공개기록639/3000, epoch single-lxc-20260928 | 현재잔여는 미조회. 동일원장/누계 보존,05/11에서 새 비용계획 |
+| Jev 예산 | p12d 실제 합성2호출 뒤 예약642/3000, epoch single-lxc-20260928 | 동일원장/누계 보존, 추가 실호출은 별도 기록 |
 | GPT 자료 | 지정 비공개 파일에 자격정보 존재 | 인증·model 접근·실비·보관계정정책 NOT_RUN, 키값 공개/복사 없음 |
 
 [1.1.8 증거](../../../evidence/public/patch-118-development-20260928.md) · [1.1.6 증거](../../../evidence/public/patch-116-development-20260928.md) · [1.1.7 증거](../../../evidence/public/patch-117-development-20260928.md)

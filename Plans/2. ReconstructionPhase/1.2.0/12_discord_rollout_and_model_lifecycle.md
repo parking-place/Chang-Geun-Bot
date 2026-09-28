@@ -1,6 +1,6 @@
 # 12 — Discord 단계 적용과 모델 수명 관리
 
-- 상태: **IN_PROGRESS — gateway의 명시적 v2 진입 준비만 구현·격리 검증. 개발 후보 적용·실제 인수·정식 출시는 NOT_RUN**
+- 상태: **IN_PROGRESS — p12d gateway 후보는 Jev v2/LLM disabled로 적용, 새 bot 적용·실제 인수·정식 출시는 NOT_RUN**
 - 책임: R120-31~33. 선행: [11 LXC 평가·이관](11_lxc_evaluation_and_migration.md)의 같은 후보 필수 게이트.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12.3·13·15.15·15.16.
 - 배포·검증 위치: DiscordBotLXC의 별도 bot/gateway 계정과 loopback TLS 경계 유지.
@@ -8,7 +8,7 @@
 
 ## 출발 상태와 완료 경계
 
-계획 출발 기록은 활성 bot `patch117b`/gateway `patch116g`, 소스·wheel 후보 `patch118a` 미적용이다. 이 문서를 작성하면서 실제 프로세스·설정·원장·모델 가용성을 새로 확인하지 않았다. 적용 직전 현재 상태와 Git SHA·설치 wheel·설정 지문을 다시 잠근다.
+계획 출발 기록은 활성 bot `patch117b`/gateway `patch116g`, 소스·wheel 후보 `patch118a` 미적용이다. p12d 실행에서 bot `patch117b`를 유지하고 gateway만 `recon120p12dgw`로 바꿨다. 공유 원장과 v1 계약을 보존했고 제한 Jev 실호출2건을 기록했다. 새 bot 적용 직전 현재 상태와 Git SHA·설치 wheel·설정 지문을 다시 잠근다.
 
 이 단계의 개발 후보 배포, 사용자 조작 인수, 버전 전체 완료, 정식 VERSION/태그는 각각 다른 판정이다. 계획 작성이나 키 파일 준비만으로 외부 API를 호출하거나 서비스를 교체하지 않는다. 구현 요청 이후에는 승인된 실행 범위에서 단계별 증거를 남긴다.
 
@@ -47,7 +47,9 @@ p12a 후속 개발 후보에서는 bot 설정 `natural_parser_version: v2`를 �
 
 p12b 후보는 한 인수 누락의 60초 모달을 연결하고, 봇 시작 때 gateway의 `parser_v2_ready`와 LLM 프로필이 명시 설정과 일치하는지 확인한다. 프로필이 다르면 시작을 거부한다. 이는 LXC 대역 시험 결과이며 실제 활성 gateway에는 v2 옵션을 적용하지 않았다.
 
-p12c 후보는 v2 opt-in 설정에 독립 trace 경로를 필수로 묶고 최소 관측을 연결했다. 활성 봇/gateway 설정은 그대로이며 신규 trace의 실제 운영 보관·관리자 접근·이관 검증은 아직 수행하지 않았다.
+p12c 후보는 v2 opt-in 설정에 독립 trace 경로를 필수로 묶고 최소 관측을 연결했다. 신규 trace의 실제 운영 보관·관리자 접근·이관 검증은 아직 수행하지 않았다.
+
+p12d에서는 gateway의 v2 경로만 `LLM_FALLBACK=disabled`로 적용했다. 기존 v1 health·TLS·공유 원장과 봇 서비스를 유지한 채 합성2문장에 대해 Jev `/v2/parse` 실제 응답을 확인했다. 봇은 아직 구 경로를 사용하며, 이 결과는 새 Discord 경로 인수가 아니다. [실행 기록](../../../evidence/public/reconstruction-120-progress.md)을 참조한다.
 
 | 상황 | 전환 정책과 필수 근거 |
 | --- | --- |

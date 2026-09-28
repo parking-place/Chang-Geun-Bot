@@ -60,7 +60,8 @@ def wait_health(expected: dict[str, object]) -> None:
     for _ in range(30):
         try:
             call("systemctl", "is-active", "--quiet", SERVICE)
-            if health() == expected:
+            observed = health()
+            if all(observed.get(key) == value for key, value in expected.items()):
                 return
         except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError):
             pass
@@ -80,6 +81,8 @@ def write_unit(data: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("candidate")
+    parser.add_argument("--parser-v2-disabled", action="store_true",
+                        help="expose v2 with LLM disabled for isolated Jev evaluation")
     args = parser.parse_args()
     if os.geteuid() != 0 or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}", args.candidate):
         parser.error("root and a safe candidate ID required")
@@ -127,8 +130,12 @@ def main() -> None:
         "profile_id": binding["profile_id"],
         "config_hash": binding["config_hash"],
     }
-    if health() != expected:
+    if not all(health().get(key) == value for key, value in expected.items()):
         parser.error("existing gateway is not ready with expected binding")
+    if args.parser_v2_disabled and (
+        "--tombstones" not in argv or "--parser-v2" in argv or "--llm-fallback" in argv
+    ):
+        parser.error("v2 candidate needs old durable tombstones and no existing v2 flags")
     before = budget()
     backup = UNIT.with_name(UNIT.name + ".before-" + args.candidate)
     if backup.exists():
@@ -136,10 +143,14 @@ def main() -> None:
     backup.write_text(previous)
     backup.chmod(0o600)
     argv[0] = str(interpreter)
+    after_expected = dict(expected)
+    if args.parser_v2_disabled:
+        argv.extend(["--parser-v2", "--llm-fallback", "disabled"])
+        after_expected.update(parser_v2_ready=True, parser_llm_profile="disabled")
     lines[index] = "ExecStart=" + shlex.join(argv) + "\n"
     try:
         write_unit("".join(lines))
-        wait_health(expected)
+        wait_health(after_expected)
         after = budget()
         if after < before:
             raise RuntimeError("ledger budget decreased")
@@ -155,6 +166,7 @@ def main() -> None:
                 "budget_before": before,
                 "budget_after": after,
                 "run_id": "single-lxc-20260928",
+                "parser_v2_disabled": args.parser_v2_disabled,
                 "rollback_unit": str(backup),
             }
         )
