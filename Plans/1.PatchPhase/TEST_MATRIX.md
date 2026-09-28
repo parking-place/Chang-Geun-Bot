@@ -1,6 +1,6 @@
 # 1.1 계열 시험 추적표
 
-- 상태: **1.1.0~1.1.2 P110~P112의 일부 조건 검증 중; 1.1.3~1.1.7의 35개 고유 시험 NOT_RUN**. [계열 현황](STATUS.md)과 각 버전 실행 기록을 따른다.
+- 상태: **1.1.0~1.1.3 P110~P113의 일부 조건 검증 중; 1.1.4~1.1.7의 28개 고유 시험 NOT_RUN**. [계열 현황](STATUS.md)과 각 버전 실행 기록을 따른다.
 - 범위: 8개 버전별7개 시험. 단계/버전 상태는 [STATUS](STATUS.md), 포함 항목은 [ITEM_COVERAGE](ITEM_COVERAGE.md)에 기록한다.
 - 아래 시험명은 추적용 요약이다. 상세 통과 조건과 하위 시나리오는 각 버전 README를 따른다. 대표 사례 하나의 성공으로 한 ID 전체를 PASS 처리하지 않는다.
 
@@ -68,13 +68,13 @@ snapshot/버튼/승인 회귀와 실제 Discord 페이지·단건 재승인·현
 
 | ID | 시험 시나리오 | 결과 | 새 실행 증거 |
 | --- | --- | --- | --- |
-| P113-01 | 빈 목록·긴 한글 제목·25건 초과 제안·다중 페이지 | NOT_RUN | — |
-| P113-02 | 페이지 사이 삭제·이동·동명 곡·snapshot 만료 | NOT_RUN | — |
-| P113-03 | 타인 버튼·DJ 회수·정적/동적 채널·주시 제거 | NOT_RUN | — |
-| P113-04 | 만료 단건 재승인·동일 버튼 재전송·끄기/켜기 | NOT_RUN | — |
-| P113-05 | 현재곡 준비/재생/일시정지·반복·다음 승인 만료 | NOT_RUN | — |
+| P113-01 | 빈 목록·긴 한글 제목·25건 초과 제안·다중 페이지 | PARTIAL — 26목록·27제안 페이지 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
+| P113-02 | 페이지 사이 삭제·이동·동명 곡·snapshot 만료 | PARTIAL — 삭제 snapshot 거절 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
+| P113-03 | 타인 버튼·DJ 회수·정적/동적 채널·주시 제거 | PARTIAL — 타인 페이지 거절 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
+| P113-04 | 만료 단건 재승인·동일 버튼 재전송·끄기/켜기 | PARTIAL — 같은 곡 2개 중 entry ID 한 건 재승인 DB PASS | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
+| P113-05 | 현재곡 준비/재생/일시정지·반복·다음 승인 만료 | PARTIAL — 연결 안 됨/볼륨 기본 상태 mock | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
 | P113-06 | 조회·버튼의 호출/개인정보, 준비 중 취소 경합 | NOT_RUN | — |
-| P113-07 | 실제 Discord 조작과 후보 복귀 | NOT_RUN | — |
+| P113-07 | 실제 Discord 조작과 후보 복귀 | PARTIAL — 고정 후보 적용·Jev 개발37/37, 조작/복귀 미실행 | [1.1.3 기록](../../evidence/public/patch-113-development-20260928.md) |
 
 ## 1.1.4
 

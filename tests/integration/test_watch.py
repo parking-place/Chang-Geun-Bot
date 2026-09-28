@@ -328,6 +328,51 @@ def test_reapproval_reuses_queue_entry(env):
         assert conn.execute("SELECT count(*) FROM audio_admissions").fetchone()[0] == 1
 
 
+def test_reapproval_selects_exact_duplicate_entry_without_queue_copy(env):
+    first = enqueue(env)
+    identifier = track(env)
+    env[4].execute(
+        plan(
+            env,
+            prefix(env),
+            Action.QUEUE_ENQUEUE,
+            {"track_ids": [identifier], "allow_duplicates": True},
+        ),
+        env[2],
+    )
+    with env[0].connect() as conn:
+        ids = [row[0] for row in conn.execute("SELECT id FROM queue_entries ORDER BY position")]
+    assert len(ids) == 2 and ids[0] == first
+    second = ids[1]
+    change(env, "remove", "21")
+    change(env, "add", "21")
+    result = env[4].execute(
+        plan(
+            env,
+            prefix(env),
+            Action.TRACK_PLAY,
+            {"track_id": identifier, "entry_id": second, "channel_id": "30"},
+        ),
+        env[2],
+    )
+    assert result["reused_entry_id"] == second
+    with env[0].connect() as conn:
+        assert not admission_valid(conn, "1", first)
+        assert admission_valid(conn, "1", second)
+        assert conn.execute("SELECT count(*) FROM queue_entries").fetchone()[0] == 2
+
+    with pytest.raises(DomainError, match="version_conflict"):
+        env[4].execute(
+            plan(
+                env,
+                prefix(env),
+                Action.TRACK_PLAY,
+                {"track_id": identifier, "entry_id": "deleted", "channel_id": "30"},
+            ),
+            env[2],
+        )
+
+
 def test_permission_loss_recovery_new_generation(env):
     request = prefix(env)
     assert env[1].health("1", "21", False) == [request]

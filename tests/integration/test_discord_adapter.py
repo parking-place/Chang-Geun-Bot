@@ -9,6 +9,7 @@ from changgeun.config import BotConfig
 from changgeun.discord_adapter.client import (
     ChangGeunClient,
     ConfirmationView,
+    PageView,
     PlaybackView,
     help_text,
     natural_failure,
@@ -106,6 +107,68 @@ def test_role_and_channel_help_does_not_expose_management_or_other_channels(clie
         prefix_enabled=True,
         watched_here=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_read_pages_bind_actor_and_reject_changed_snapshot(client):
+    actor = await client.fresh_actor(interaction())
+    with client.db.transaction() as conn:
+        for number in range(26):
+            conn.execute(
+                "INSERT INTO playlists(guild_id,id,name,normalized_name) VALUES(?,?,?,?)",
+                ("1", f"list-{number}", f"목록 {number:02d}", f"목록 {number:02d}"),
+            )
+    result = client.executor.execute(
+        client.make_plan(actor, "read", Action.PLAYLIST_LIST, {}), actor
+    )
+    page = PageView(client, actor, Action.PLAYLIST_LIST, {}, result)
+    assert "총 26건 · 1/3페이지" in page.render()
+    await page.move(interaction(102, user=20, component=True), 1)
+    assert page.page == 0
+    current = interaction(103, component=True)
+    await page.move(current, 1)
+    assert page.page == 1 and "2/3페이지" in current.events[-1]["content"]
+    with client.db.transaction() as conn:
+        conn.execute("UPDATE playlists SET deleted_at=1 WHERE id='list-0'")
+    current = interaction(104, component=True)
+    await page.move(current, 1)
+    assert page.page == 1
+    assert "다시 실행" in current.events[-1]
+
+
+@pytest.mark.asyncio
+async def test_proposals_beyond_twenty_five_and_current_status(client):
+    actor = await client.fresh_actor(interaction())
+    playlist = client.executor.execute(
+        client.make_plan(actor, "p", Action.PLAYLIST_CREATE, {"name": "대기 목록"}), actor
+    )["playlist_id"]
+    track = client.executor.execute(
+        client.make_plan(
+            actor,
+            "t",
+            Action.CATALOG_REGISTER,
+            {"source_type": "approved_audio", "external_id": "tone", "title": "시험음"},
+        ),
+        actor,
+    )["track_id"]
+    with client.db.transaction() as conn:
+        for number in range(27):
+            conn.execute(
+                "INSERT INTO proposals(guild_id,id,actor_id,playlist_id,track_id,created_at) "
+                "VALUES(?,?,?,?,?,?)",
+                ("1", f"proposal-{number}", "10", playlist, track, float(number)),
+            )
+    result = client.executor.execute(
+        client.make_plan(actor, "read-proposals", Action.PROPOSAL_LIST, {}), actor
+    )
+    assert len(result["proposals"]) == 27
+    page = PageView(client, actor, Action.PROPOSAL_LIST, {}, result)
+    page.page = 2
+    assert "총 27건 · 3/3페이지" in page.render()
+    current = interaction(105)
+    await client.current_status(current)
+    assert "상태: 연결 안 됨" in current.events[-1][0]
+    assert "볼륨 30%" in current.events[-1][0]
 
 
 def test_natural_error_is_bounded_and_does_not_echo_upstream_body():

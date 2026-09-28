@@ -43,6 +43,7 @@ from changgeun.domain.models import (
     DomainError,
     Policy,
     authorize,
+    digest,
     normalized_name,
 )
 from changgeun.nlp.client import GatewayClient
@@ -238,6 +239,175 @@ class PlaybackView(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button[Any]
     ) -> None:
         await self.client.submit(interaction, Action.PLAYBACK_STOP)
+
+    @discord.ui.button(label="새로고침", style=discord.ButtonStyle.secondary)
+    async def refresh(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await self.client.current_status(interaction)
+
+
+class PageView(discord.ui.View):
+    """Ephemeral read snapshot; every button rechecks actor and source rows."""
+
+    def __init__(
+        self,
+        client: ChangGeunClient,
+        actor: Actor,
+        action: Action,
+        arguments: dict[str, Any],
+        result: dict[str, Any],
+    ) -> None:
+        super().__init__(timeout=300)
+        self.client, self.actor, self.action = client, actor, action
+        self.arguments, self.result = arguments, result
+        self.fingerprint = digest(result)
+        self.page = 0
+
+    def rows(self) -> list[str]:
+        if self.action == Action.PLAYLIST_LIST:
+            return [safe(row["name"])[:140] for row in self.result["playlists"]]
+        if self.action == Action.CATALOG_SEARCH:
+            return [safe(row["title"])[:140] for row in self.result["tracks"]]
+        if self.action == Action.PROPOSAL_LIST:
+            return [
+                f"{safe(row['id'])[:40]}: {safe(row['title'])[:90]} → {safe(row['name'])[:40]}"
+                for row in self.result["proposals"]
+            ]
+        return [
+            f"{index + 1}. {safe(row['title'])[:120]} · {row['approval']}"
+            for index, row in enumerate(self.result["entries"])
+        ]
+
+    def render(self) -> str:
+        rows = self.rows()
+        pages = max(1, (len(rows) + 9) // 10)
+        self.page = min(self.page, pages - 1)
+        heading = {
+            Action.PLAYLIST_LIST: "저장 목록",
+            Action.CATALOG_SEARCH: "검색 결과",
+            Action.PROPOSAL_LIST: "대기 중인 제안",
+            Action.QUEUE_SHOW: "대기열",
+        }[self.action]
+        if self.action == Action.QUEUE_SHOW:
+            title = self.result["session"].get("current_title") or "없어"
+            heading += " · 현재곡 " + safe(title)[:80]
+        page_rows = rows[self.page * 10 : self.page * 10 + 10]
+        return f"{heading} · 총 {len(rows)}건 · {self.page + 1}/{pages}페이지\n" + (
+            "\n".join(page_rows) if page_rows else "없어."
+        )
+
+    async def fresh_result(self, interaction: discord.Interaction) -> Actor:
+        if (
+            str(interaction.user.id),
+            str(interaction.guild_id),
+            str(interaction.channel_id),
+        ) != (self.actor.user_id, self.actor.guild_id, self.actor.text_channel_id):
+            raise DomainError("identity_mismatch")
+        actor = await self.client.fresh_actor(interaction)
+        plan = self.client.make_plan(actor, str(interaction.id), self.action, self.arguments)
+        if digest(self.client.executor.execute(plan, actor)) != self.fingerprint:
+            raise DomainError("version_conflict")
+        return actor
+
+    async def move(self, interaction: discord.Interaction, step: int) -> None:
+        try:
+            await self.fresh_result(interaction)
+            self.page = max(0, min((len(self.rows()) - 1) // 10, self.page + step))
+            await interaction.response.edit_message(content=self.render(), view=self)
+        except DomainError:
+            await interaction.response.send_message(
+                "권한이나 목록이 바뀌었어. 명령을 다시 실행해줘.", ephemeral=True
+            )
+
+    @discord.ui.button(label="이전", style=discord.ButtonStyle.secondary)
+    async def previous(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await self.move(interaction, -1)
+
+    @discord.ui.button(label="다음", style=discord.ButtonStyle.secondary)
+    async def next_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await self.move(interaction, 1)
+
+    @discord.ui.button(label="만료 곡 선택", style=discord.ButtonStyle.primary)
+    async def expired(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        if self.action != Action.QUEUE_SHOW:
+            await interaction.response.send_message("대기열에서만 선택할 수 있어.", ephemeral=True)
+            return
+        try:
+            await self.fresh_result(interaction)
+        except DomainError:
+            await interaction.response.send_message(
+                "권한이나 대기열이 바뀌었어. 다시 조회해줘.", ephemeral=True
+            )
+            return
+        expired = [
+            row
+            for row in self.result["entries"][self.page * 10 : self.page * 10 + 10]
+            if row["approval"] == "승인 만료"
+        ]
+        if not expired:
+            await interaction.response.send_message(
+                "이 페이지에 만료된 곡이 없어.", ephemeral=True
+            )
+            return
+        await interaction.response.send_message(
+            "재생을 다시 요청할 기존 항목 하나를 선택해줘. 선택만으로 재생하지 않아.",
+            view=ExpiredSelection(self, expired),
+            ephemeral=True,
+        )
+
+
+class ExpiredSelection(discord.ui.View):
+    def __init__(self, page: PageView, rows: list[dict[str, Any]]) -> None:
+        super().__init__(timeout=60)
+        self.page, self.rows = page, {row["id"]: row for row in rows}
+
+        class Picker(discord.ui.Select[Any]):
+            async def callback(self, interaction: discord.Interaction) -> None:
+                await select_expired(interaction)
+
+        picker = Picker(
+            placeholder="만료된 대기 항목 선택",
+            options=[
+                discord.SelectOption(label=str(row["title"])[:100], value=row["id"])
+                for row in rows
+            ],
+        )
+
+        async def select_expired(interaction: discord.Interaction) -> None:
+            try:
+                actor = await page.fresh_result(interaction)
+                row = self.rows.get(picker.values[0])
+                if row is None or row["approval"] != "승인 만료":
+                    raise DomainError("version_conflict")
+                target = actor.bot_voice_channel_id or actor.voice_channel_id
+                if target is None:
+                    raise DomainError("same_voice_required")
+                plan = page.client.make_plan(
+                    actor,
+                    str(interaction.id),
+                    Action.TRACK_PLAY,
+                    {
+                        "track_id": row["track_id"],
+                        "entry_id": row["id"],
+                        "channel_id": target,
+                    },
+                    origin="button",
+                )
+                await page.client.submit_plan(interaction, plan, actor=actor)
+                self.stop()
+            except DomainError:
+                await interaction.response.send_message(
+                    "항목·권한·음성 상태가 바뀌었어. 다시 조회해줘.", ephemeral=True
+                )
+
+        self.add_item(picker)
 
 
 class YouTubeSelection(discord.ui.View):
@@ -742,7 +912,20 @@ class ChangGeunClient(discord.Client):
                     if current != plan.arguments["track_id"]:
                         raise DomainError("youtube_prepare_failed")
             content = self.render(plan.action, result)
-            if plan.action == Action.PLAYLIST_EXPORT:
+            if (
+                plan.action
+                in {
+                    Action.PLAYLIST_LIST,
+                    Action.CATALOG_SEARCH,
+                    Action.QUEUE_SHOW,
+                    Action.PROPOSAL_LIST,
+                }
+                and not isinstance(interaction, MentionEntry)
+                and interaction.type != discord.InteractionType.component
+            ):
+                page = PageView(self, actor, plan.action, plan.arguments, result)
+                await interaction.followup.send(page.render(), view=page, ephemeral=True)
+            elif plan.action == Action.PLAYLIST_EXPORT:
                 await interaction.followup.send(
                     "곡 참조와 순서를 JSON 파일로 내보냈어.",
                     file=discord.File(
@@ -1474,18 +1657,7 @@ class ChangGeunClient(discord.Client):
 
         @tree.command(name="현재곡", description="현재 상태와 재생 제어 버튼")
         async def current(interaction: discord.Interaction) -> None:
-            await interaction.response.defer(ephemeral=True)
-            try:
-                actor = await self.fresh_actor(interaction)
-                result = self.executor.execute(
-                    self.make_plan(actor, str(interaction.id), Action.QUEUE_SHOW, {}), actor
-                )
-                title = result["session"].get("current_title") or "현재곡 없음"
-                await interaction.followup.send(
-                    safe(title), view=PlaybackView(self), ephemeral=True
-                )
-            except DomainError:
-                await interaction.followup.send("허용된 서버와 채널에서 사용해줘.", ephemeral=True)
+            await self.current_status(interaction)
 
         @tree.command(name="부탁", description="한국어로 한 가지 동작 요청")
         async def natural(interaction: discord.Interaction, 내용: str) -> None:
@@ -1538,6 +1710,50 @@ class ChangGeunClient(discord.Client):
                 ]
             except (DomainError, discord.HTTPException, TimeoutError, sqlite3.Error, ValueError):
                 return []
+
+    async def current_status(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            actor = await self.fresh_actor(interaction)
+            result = self.executor.execute(
+                self.make_plan(actor, str(interaction.id), Action.QUEUE_SHOW, {}), actor
+            )
+            state = result["session"]
+            labels = {
+                "disconnected": "연결 안 됨",
+                "connecting": "연결 중",
+                "idle": "대기 중",
+                "resolving": "준비 중",
+                "playing": "재생 중",
+                "paused": "일시정지",
+                "stopping": "정리 중",
+                "reconnecting": "재연결 중",
+            }
+            source = (
+                "https://www.youtube.com/watch?v=" + state["current_external_id"]
+                if state.get("current_source_type") == "youtube"
+                and re.fullmatch(r"[A-Za-z0-9_-]{11}", state.get("current_external_id") or "")
+                else "승인 음원" if state.get("current_title") else "없어"
+            )
+            following = next(
+                (row["title"] for row in result["entries"] if row["approval"] == "승인됨"),
+                "없어",
+            )
+            await interaction.followup.send(
+                "현재곡: "
+                + safe(state.get("current_title") or "없어")[:120]
+                + "\n상태: "
+                + labels.get(state["desired_state"], "확인 중")
+                + f" · 볼륨 {state['volume']}% · 반복 {safe(state['repeat_mode'])}"
+                + "\n다음 승인 곡: "
+                + safe(following)[:120]
+                + "\n원본: "
+                + source,
+                view=PlaybackView(self),
+                ephemeral=True,
+            )
+        except DomainError:
+            await interaction.followup.send("허용된 서버와 채널에서 사용해줘.", ephemeral=True)
 
     async def edit_number(
         self,

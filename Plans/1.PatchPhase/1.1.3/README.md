@@ -1,6 +1,6 @@
 # 1.1.3 — 조회 페이지와 재생 상태 화면
 
-- 상태: **PLANNED — 문서만 작성, 구현·LXC 시험·개발 인수 미실행**
+- 상태: **IN_PROGRESS — 개발 후보 구현·LXC 부분 시험·적용, 전체 인수 미완료**. [실행 증거](../../../evidence/public/patch-113-development-20260928.md).
 - 포함 항목: **F-02, F-03, F-05**. [전체 항목 배정](../ITEM_COVERAGE.md)을 따른다.
 - 목표: 긴 조회 결과를 Discord 안에서 탐색하고, 승인 만료 곡을 정확히 골라 새로 요청하며, 현재 재생 상태를 확인한다.
 - 실행·상태·증거 기준: [공통 규칙](../EXECUTION_RULES.md), [STATUS](../STATUS.md), [시험 추적](../TEST_MATRIX.md).
@@ -59,10 +59,10 @@
 
 | 단계 | 상태 | 작업 | 완료 산출물 |
 | --- | --- | --- | --- |
-| 01 설계 | PLANNED | 페이지 snapshot·권한·재승인 흐름·상태 문구 확정 | 화면 예시, 데이터/버전 계약, P113 시험 fixture |
-| 02 구현 | PLANNED | 페이지·단건 선택·현재곡 확장, 파일 fallback 유지 | 영향 소스와 필요 시 additive migration |
-| 03 안전 회귀 | PLANNED | 오래된 페이지·타인 버튼·권한/주시 변경·중복 조작 | 지정 LXC의 결정적 단위/mock/DB 결과 |
-| 04 LXC 검증 | PLANNED | 고정 설치 후보로 긴 목록·다중 페이지·재생 경합 검증 | candidate/source/config/schema와 P113 결과 |
+| 01 설계 | IN_PROGRESS | 페이지 snapshot·권한·재승인 흐름·상태 문구 확정 | 슬래시 페이지/entry ID 설계; prefix 페이지·경합 조건 잔여 |
+| 02 구현 | IN_PROGRESS | 페이지·단건 선택·현재곡 확장, 파일 fallback 유지 | [부분 기록](../../../evidence/public/patch-113-development-20260928.md), DB migration 없음 |
+| 03 안전 회귀 | IN_PROGRESS | 오래된 페이지·타인 버튼·권한/주시 변경·중복 조작 | 페이지 타인/변경·entry ID DB mock PASS; 전건 미완료 |
+| 04 LXC 검증 | IN_PROGRESS | 고정 설치 후보로 긴 목록·다중 페이지·재생 경합 검증 | 소스/wheel384 PASS·개발37/37; 실제 음성 경합 미완료 |
 | 05 개발 인수/복귀 | PLANNED | 실제 사용자 조회·단건 재승인·상태 확인, 이전 묶음 복귀 검증 | 사용자 결과·복귀 증거·남은 게이트 기록 |
 
 ## 고유 인수 시험

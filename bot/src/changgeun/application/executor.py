@@ -15,7 +15,7 @@ from typing import Any, cast
 from changgeun.application import undo
 from changgeun.application.generation import Rules, select
 from changgeun.application.transfer import validate_references
-from changgeun.application.watch import policy_for_request, source_row
+from changgeun.application.watch import admission_valid, policy_for_request, source_row
 from changgeun.discord_adapter.prefix import check_message
 from changgeun.domain.models import (
     PLAYBACK_ACTIONS,
@@ -54,7 +54,7 @@ ARGUMENTS: dict[Action, tuple[set[str], set[str]]] = {
     Action.PLAYLIST_EXPORT: ({"playlist_id"}, set()),
     Action.PLAYLIST_LIST: (set(), set()),
     Action.PLAYLIST_PLAY: ({"playlist_id", "channel_id", "track_ids"}, {"allow_duplicates"}),
-    Action.TRACK_PLAY: ({"track_id", "channel_id"}, set()),
+    Action.TRACK_PLAY: ({"track_id", "channel_id"}, {"entry_id"}),
     Action.CATALOG_REGISTER: ({"source_type", "external_id", "title"}, {"metadata"}),
     Action.CATALOG_SEARCH: ({"query"}, set()),
     Action.CATALOG_ANNOTATE: ({"track_id", "aliases", "tags"}, {"creator"}),
@@ -612,11 +612,20 @@ class Executor:
                     raise DomainError("audio_source_not_approved")
             session = load_session(conn, guild)
             start_requested = session.state in {PlaybackState.DISCONNECTED, PlaybackState.IDLE}
-            reused = (
-                next((entry.id for entry in session.queue if entry.track_id == tracks[0]), None)
-                if action == Action.TRACK_PLAY and start_requested
-                else None
-            )
+            selected_entry = args.get("entry_id") if action == Action.TRACK_PLAY else None
+            if selected_entry is not None:
+                if not any(
+                    entry.id == selected_entry and entry.track_id == tracks[0]
+                    for entry in session.queue
+                ):
+                    raise DomainError("version_conflict")
+                reused = selected_entry
+            else:
+                reused = (
+                    next((entry.id for entry in session.queue if entry.track_id == tracks[0]), None)
+                    if action == Action.TRACK_PLAY and start_requested
+                    else None
+                )
             if reused is None:
                 self._append(conn, guild, None, tracks, args.get("allow_duplicates", False))
                 session = load_session(conn, guild)
@@ -625,11 +634,17 @@ class Executor:
                 PlaybackState.IDLE,
             }:
                 # An explicit single track starts first when idle; preserve earlier queued items.
-                session.queue.sort(key=lambda entry: entry.track_id != args["track_id"])
+                session.queue.sort(
+                    key=lambda entry: entry.id != reused
+                    if selected_entry is not None
+                    else entry.track_id != args["track_id"]
+                )
             # This command freshly approves its requested entries before admission rows are written.
-            session.eligible_ids = (session.eligible_ids or frozenset()) | {
-                e.id for e in session.queue if e.track_id in tracks
-            }
+            session.eligible_ids = (session.eligible_ids or frozenset()) | (
+                {selected_entry}
+                if selected_entry is not None
+                else {e.id for e in session.queue if e.track_id in tracks}
+            )
             session.version += 1
             if session.state == PlaybackState.DISCONNECTED:
                 session.join()
@@ -700,7 +715,7 @@ class Executor:
                     for r in rows
                     if query in normalized_name(r["title"])
                     or query in normalized_name(r["annotations_json"])
-                ][:25]
+                ]
             }
         if action == Action.CATALOG_ANNOTATE:
             self._tracks_exist(conn, guild, [args["track_id"]])
@@ -803,25 +818,29 @@ class Executor:
             session_data = dict(
                 conn.execute("SELECT * FROM sessions WHERE guild_id=?", (guild,)).fetchone()
             )
-            title = conn.execute(
-                "SELECT title FROM tracks WHERE guild_id=? AND id=?",
+            current_track = conn.execute(
+                "SELECT title,source_type,external_id FROM tracks WHERE guild_id=? AND id=?",
                 (guild, session_data["current_track_id"]),
             ).fetchone()
-            session_data["current_title"] = title[0] if title else None
+            session_data["current_title"] = current_track[0] if current_track else None
+            session_data["current_source_type"] = current_track[1] if current_track else None
+            session_data["current_external_id"] = current_track[2] if current_track else None
+            entries = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT q.*,t.title FROM queue_entries q JOIN tracks t "
+                    "ON t.guild_id=q.guild_id AND t.id=q.track_id "
+                    "WHERE q.guild_id=? ORDER BY position",
+                    (guild,),
+                )
+            ]
+            for entry in entries:
+                entry["approval"] = (
+                    "승인됨" if admission_valid(conn, guild, entry["id"]) else "승인 만료"
+                )
             return {
                 "session": session_data,
-                "entries": [
-                    dict(r)
-                    for r in conn.execute(
-                        "SELECT q.*,t.title,CASE WHEN a.revoked=1 OR a.origin='legacy_unknown' "
-                        "OR a.entry_id IS NULL THEN '승인 만료' ELSE '승인됨' END AS approval "
-                        "FROM queue_entries q JOIN tracks t "
-                        "ON t.guild_id=q.guild_id AND t.id=q.track_id "
-                        "LEFT JOIN audio_admissions a ON a.guild_id=q.guild_id AND a.entry_id=q.id "
-                        "WHERE q.guild_id=? ORDER BY position",
-                        (guild,),
-                    )
-                ],
+                "entries": entries,
             }
         if action in {
             Action.QUEUE_ENQUEUE,
@@ -885,7 +904,7 @@ class Executor:
                         "JOIN tracks t ON t.guild_id=p.guild_id AND t.id=p.track_id "
                         "JOIN playlists l ON l.guild_id=p.guild_id AND l.id=p.playlist_id "
                         "WHERE p.guild_id=? AND p.status='pending' AND l.deleted_at IS NULL "
-                        "ORDER BY p.created_at,p.id LIMIT 25",
+                        "ORDER BY p.created_at,p.id",
                         (guild,),
                     )
                 ]
