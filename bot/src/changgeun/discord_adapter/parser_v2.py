@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import discord
 
@@ -218,13 +218,33 @@ class _ConfirmView(discord.ui.View):
                 member=await action.guild.fetch_member(interaction.user.id),
                 contexts=action.contexts,
             )
+            if action.validated.draft.command_id == "C21":
+                expected = action.validated.arguments.get("채널") or fresh.voice_channel_id
+                voice = cast(discord.VoiceClient | None, action.guild.voice_client)
+                if (not expected or voice is None or not voice.is_connected()
+                        or str(getattr(voice.channel, "id", "")) != str(expected)):
+                    raise DomainError("voice_connection_failed")
+            elif action.validated.draft.command_id == "C22":
+                voice = cast(discord.VoiceClient | None, action.guild.voice_client)
+                if voice is not None and voice.is_connected():
+                    raise DomainError("voice_connection_failed")
             trace = getattr(self.bridge.client, "parser_trace", None)
             if trace is not None:
+                voice_verified = action.validated.draft.command_id in {"C21", "C22"}
                 trace.outcome(action.root_id, parse_status="parsed",
-                              execution_status="outcome_unknown",
+                              execution_status="executed" if voice_verified
+                              else "outcome_unknown",
                               resolved_command=action.validated.draft.command_id,
-                              executed_command=action.validated.draft.command_id)
-            await interaction.followup.send("확인한 명령을 처리했어.", ephemeral=True)
+                              executed_command=action.validated.draft.command_id,
+                              success=True if voice_verified else None)
+            await interaction.followup.send(
+                "음성채널 입장을 확인했어."
+                if action.validated.draft.command_id == "C21" else
+                "음성채널 퇴장을 확인했어."
+                if action.validated.draft.command_id == "C22" else
+                "명령 확인을 마쳤어. 실행 결과는 채널 응답을 확인해줘.",
+                ephemeral=True,
+            )
             if isinstance(action.source, MentionEntry) and action.source.followup.ledger:
                 action.source.followup.ledger.finish_waiting(action.root_id, "finished")
         except (ParseError, DomainError, discord.HTTPException) as exc:

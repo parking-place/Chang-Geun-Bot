@@ -177,6 +177,51 @@ async def test_confirmed_callback_error_never_claims_success():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('connected', [False, True])
+async def test_confirmed_voice_join_requires_connected_voice(connected):
+    actor = Actor('g', 'u', frozenset({'dj'}), 'c', voice_channel_id='v')
+
+    async def fresh(_):
+        return actor
+
+    async def member(_):
+        return SimpleNamespace(id='u')
+
+    async def silently_return(*args, **kwargs):
+        pass
+
+    events = []
+    response = SimpleNamespace(done=False)
+    response.is_done = lambda: response.done
+
+    async def defer(**kwargs):
+        response.done = True
+
+    async def send(content, **kwargs):
+        events.append(content)
+
+    response.defer = defer
+    response.send_message = send
+    interaction = SimpleNamespace(guild_id='g', channel_id='c',
+                                  user=SimpleNamespace(id='u'), response=response,
+                                  followup=SimpleNamespace(send=send))
+    voice = SimpleNamespace(is_connected=lambda: connected,
+                            channel=SimpleNamespace(id='v'))
+    guild = SimpleNamespace(fetch_member=member, voice_client=voice)
+    source = SimpleNamespace(guild=guild)
+    bridge = parser_v2.ParserV2Bridge(SimpleNamespace(fresh_actor=fresh))
+    view = InputNormalizer().normalize('들어와')
+    validated = ValidatedCommand(CommandDraft('C21', {}, {}), {}, 'g', 'u', True)
+    action = parser_v2._Confirmation(validated, source, source, view, 'r', 'initial',
+                                     'scope', SimpleNamespace(invoke=silently_return), guild)
+    token = bridge.pending.issue(kind='confirm', root_id='r', guild_id='g', channel_id='c',
+                                 actor_id='u', command_id='C21', payload=action)
+    await parser_v2._ConfirmView(bridge, token, action).children[0].callback(interaction)
+    assert events == (['음성채널 입장을 확인했어.'] if connected else
+                      ['음성 연결에 실패했어. 채널 권한을 확인해줘.'])
+
+
+@pytest.mark.asyncio
 async def test_typed_modal_completes_only_missing_argument_then_confirms(tmp_path, monkeypatch):
     model_calls = []
 

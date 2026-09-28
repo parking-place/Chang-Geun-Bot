@@ -4,9 +4,9 @@
 
 ## 현재 적용 상태
 
-현재 개발 봇 `recon120p12pbot`(v2/LLM disabled)과 중계 `recon120p12egw`(v2/LLM disabled)를 테스트 서버에 적용했다. 봇 run은 `recon120p12p-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [1.2.0 실행 기록](../evidence/public/reconstruction-120-progress.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. p12m 실제 조회2건은 PASS였으나 p12n/o 음성 입장은 확인 뒤에도 FAIL이었다. p12p 재시험을 기다린다. 전체 출시 게이트는 미완료이고 정식 VERSION/태그는 만들지 않았다.
+현재 개발 봇 `recon120p12qbot`(v2/LLM disabled)과 중계 `recon120p12egw`(v2/LLM disabled)를 테스트 서버에 적용했다. 봇 run은 `recon120p12q-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [1.2.0 실행 기록](../evidence/public/reconstruction-120-progress.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. p12m 실제 조회2건과 p12p 허용 음성채널 입장1건은 PASS였다. p12n/o 입장은 FAIL이었고 p12p의 거부/입장 안내는 부정확해 p12q로 보정한 뒤 재시험을 기다린다. 전체 출시 게이트는 미완료이고 정식 VERSION/태그는 만들지 않았다.
 
-1.1.8의 [이전 `patch118a` 봇 wheel](../evidence/public/patch-118-development-20260928.md)은 격리 후보로 남겨 둔다. 현재 활성 `p12p` 후보는 LXC source/설치 wheel 각각508회귀를 통과했다. 공유 Jev 예약 마지막 확인 값은 p12o 사용자 입력을 포함해792/3000, GPT 예약/실제는17229/2678 micro USD이며 다음 평가 전 재조회한다. GPT 키의 임시 LXC 사본은 제거했고 gateway는 disabled다.
+1.1.8의 [이전 `patch118a` 봇 wheel](../evidence/public/patch-118-development-20260928.md)은 격리 후보로 남겨 둔다. 현재 활성 `p12q` 후보는 LXC source/설치 wheel 각각510회귀를 통과했다. 공유 Jev 예약 마지막 확인 값은 p12p 사용자 입력을 포함해804/3000, GPT 예약/실제는17229/2678 micro USD이며 다음 평가 전 재조회한다. GPT 키의 임시 LXC 사본은 제거했고 gateway는 disabled다.
 
 `changgeun-dev-bot.service`는 봇 계정, `changgeun-jev-api.service`는 별도 `changgeun-gateway` 계정으로 실행한다. 중계는 loopback TLS8443만 받는다. 외부 API 키를 봇 계정에 제공하지 않는다. 두 개발 unit은 자동 부팅 시작으로 활성화하지 않았다.
 

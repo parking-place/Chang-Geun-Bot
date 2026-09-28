@@ -62,6 +62,9 @@ from changgeun.storage.database import Database
 ERRORS = {
     "dj_required": "곡 편집과 재생 제어에는 DJ 역할이 필요해. 곡 제안은 보낼 수 있어.",
     "same_voice_required": "봇과 같은 허용 음성채널에 들어간 뒤 다시 요청해줘.",
+    "voice_channel_not_allowed": (
+        "지금 접속한 음성채널은 봇의 허용 목록에 없어. 허용된 음성채널에서 다시 요청해줘."
+    ),
     "version_conflict": "그동안 목록이나 대기열이 바뀌었어. 다시 선택해줘.",
     "constraint_conflict": "이름이나 곡 참조가 겹쳐서 저장하지 않았어.",
     "duplicate_track": "이미 있는 곡이야. 중복 허용을 선택하면 따로 추가할 수 있어.",
@@ -1257,6 +1260,12 @@ class ChangGeunClient(discord.Client):
                 )
                 for t in result["tracks"]
             )
+        if action == Action.VOICE_JOIN:
+            return "음성채널에 입장했어."
+        if action == Action.VOICE_MOVE:
+            return "음성채널을 옮겼어."
+        if action == Action.VOICE_LEAVE:
+            return "음성채널에서 나왔어."
         if "desired_state" in result:
             return "재생 요청을 처리했어."
         return (

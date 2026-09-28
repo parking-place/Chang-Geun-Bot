@@ -1,6 +1,6 @@
 # 11 — LXC 독립 평가와 이관·복귀 검증
 
-- 상태: **IN_PROGRESS — p12p 소스/새 bot wheel 508회귀와 Jev/GPT 제한 합성호출은 실행, 개발 명령선택39/46으로 목표 미달, 독립 평가·이관은 NOT_RUN**
+- 상태: **IN_PROGRESS — p12q 소스/새 bot wheel 510회귀와 Jev/GPT 제한 합성호출은 실행, 개발 명령선택39/46으로 목표 미달, 독립 평가·이관은 NOT_RUN**
 - 책임: R120-27~30. 선행: 01~10의 계약·구현 후보와 제한 설정 준비.
 - 기준: [원본 명세](../changgeun_jev_llm_fallback_command_parser_spec_v1.3.md) §12·13·15.15·15.16, [시험표](TEST_MATRIX.md).
 - 실행 위치: 모든 제품 lint·타입·단위/mock·통합·실제 모델·DB 시험은 DiscordBotLXC만 사용한다.
@@ -10,7 +10,7 @@
 
 명령 이름만 고르는 정확도와 실제 명령·전체 인수·검증 결과가 맞는 정확도를 구분한다. 같은 소스·설정·등록부·모델 후보를 소스 실행과 설치 wheel에서 검증하고, 새 parser 계약과 기존 서비스 데이터의 복귀 가능성을 함께 확인한다.
 
-계획 당시 활성 봇은 `patch117b`, gateway는 `patch116g`였다. p12d/e에 gateway v2를 적용하고 p12h부터 테스트 서버 봇을 v2로 전환했다. 현재 봇은 `recon120p12pbot`, gateway는 `recon120p12egw`/LLM disabled다. `patch118a`는 미적용 소스/wheel 후보였다. 현재 실행 단위·원장과 제한 실호출 결과는 [실행 기록](../../../evidence/public/reconstruction-120-progress.md)에 남겼다. 다음 전환 전에도 설치 wheel·서비스 설정·API 계약·업무 DB 스키마·원장 잔여량을 다시 기록한다.
+계획 당시 활성 봇은 `patch117b`, gateway는 `patch116g`였다. p12d/e에 gateway v2를 적용하고 p12h부터 테스트 서버 봇을 v2로 전환했다. 현재 봇은 `recon120p12qbot`, gateway는 `recon120p12egw`/LLM disabled다. `patch118a`는 미적용 소스/wheel 후보였다. 현재 실행 단위·원장과 제한 실호출 결과는 [실행 기록](../../../evidence/public/reconstruction-120-progress.md)에 남겼다. 다음 전환 전에도 설치 wheel·서비스 설정·API 계약·업무 DB 스키마·원장 잔여량을 다시 기록한다.
 
 [1.1.8 개발 증거](../../../evidence/public/patch-118-development-20260928.md)의 45/46은 개발 예문 의도 ID 성적이다. 369개 회귀, 과거 독립 평가 실패, 실제 Discord 미인수도 각각 별도 이력으로 유지하며 신규 독립 성적으로 전환하지 않는다.
 
