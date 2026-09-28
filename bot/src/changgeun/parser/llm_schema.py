@@ -32,9 +32,14 @@ def rewrite_schema() -> dict[str, Any]:
 def _argument_schema(argument: ArgumentSpec,
                      collection: CollectionSnapshot | None) -> dict[str, Any]:
     if argument.collection:
-        if collection is None or not collection.complete or not collection.selections:
-            raise ParseError("collection_required_for_llm")
-        ids = [selection.token for selection in collection.selections]
+        if collection is None:
+            if not argument.depends_on:
+                raise ParseError("collection_required_for_llm")
+            ids: list[str] = []  # Parent is not known until this parse completes.
+        else:
+            if not collection.complete or not collection.selections:
+                raise ParseError("collection_required_for_llm")
+            ids = [selection.token for selection in collection.selections]
         return _nullable({
             "type": "object", "additionalProperties": False,
             "properties": {
@@ -156,15 +161,16 @@ def validate_full_output(value: Any, *, commands: dict[str, CommandSpec],
             continue
         if argument.collection:
             collection = collections.get((spec.identifier, argument.name))
-            if (collection is None or not isinstance(value_arg, dict)
-                    or set(value_arg) != {"candidate_id", "query"}):
+            if not isinstance(value_arg, dict) or set(value_arg) != {
+                "candidate_id", "query"
+            }:
                 raise ParseError("invalid_full_parse_output")
             candidate, query = value_arg["candidate_id"], value_arg["query"]
             if (candidate is None) == (query is None):
                 raise ParseError("invalid_reference")
-            if candidate is not None and candidate not in {
+            if candidate is not None and (collection is None or candidate not in {
                 entry.token for entry in collection.selections
-            }:
+            }):
                 raise ParseError("foreign_selection")
             if query is not None and (not isinstance(query, str) or not query.strip()):
                 raise ParseError("invalid_reference")

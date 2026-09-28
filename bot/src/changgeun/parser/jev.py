@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from changgeun.application.commands import CommandService
@@ -145,9 +145,13 @@ class JevInterpreter:
             if kind != "single" or command_id == "__NONE__":
                 return ParserOutcome("failed", code="interpretation_unclear")
             spec = allowed[command_id]
-            return await self._arguments(spec, state, view, actor, root_id=root_id,
-                                         pass_id=pass_id, scope_hash=scope_hash,
-                                         guild=guild, member=member)
+            outcome = await self._arguments(spec, state, view, actor, root_id=root_id,
+                                            pass_id=pass_id, scope_hash=scope_hash,
+                                            guild=guild, member=member)
+            if outcome.status != "parsed":
+                return replace(outcome, options={**outcome.options,
+                                                 "selected_command": command_id})
+            return outcome
         except (ParseError, KeyError, TypeError, ValueError) as exc:
             code = exc.code if isinstance(exc, ParseError) else "invalid_jev_response"
             return ParserOutcome("failed", code=code)

@@ -1,6 +1,6 @@
 # 08. rewrite·재해석·full fallback 상태 전이
 
-상태: **PLANNED**. 상태기계 구현과 원격 시험은 아직 수행하지 않았다.
+상태: **IN_PROGRESS**. 유한 상태 전이·보호 리터럴 검사·mock 전이 시험은 완료, 실제 후보/Discord·최악8회 통합 시험은 미완료다.
 
 [버전 개요](README.md) · [아키텍처](ARCHITECTURE.md) · [시험 추적](TEST_MATRIX.md) · [실행 상태](STATUS.md)
 

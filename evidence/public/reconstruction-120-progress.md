@@ -52,4 +52,10 @@
 - [OpenAI 공식 GPT-5 nano 모델 문서](https://developers.openai.com/api/docs/models/gpt-5-nano)의 2026-09-28 조회값인 입력 $0.05/100만 토큰·출력 $0.40/100만 토큰, Responses·Structured Outputs 지원을 확인했다. [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)와 [Responses 이관 문서](https://developers.openai.com/api/docs/guides/migrate-to-responses)의 `text.format` strict JSON Schema·`store=false` 계약을 사용한다. 가격 버전은 코드에 고정하며 실제 검증 전 재확인한다.
 - `disabled`/`gpt-5-nano`/미구현 프로필을 명시 구분한다. bot의 등록부에서 rewrite와 full_parse 엄격 스키마를 만들고 실제 목록 opaque ID만 후보로 넣는다. gateway REST 어댑터는 도구 없이 고정 Responses endpoint에 단회 전송하며 사용량을 먼저 수집하고 거절·미완료·스키마 오류를 실행 불가 상태로 기록한다. gateway v2 원장은 예약금액과 확인된 실비를 분리하고 사용량 불명은 0원으로 바꾸지 않는다.
 - 사용자 지정 US$1은 모든 요청/재시작에 걸친 **누적 예약 상한**이다. 최대 입력 byte와 출력 토큰, 캐시 할인 없는 표준 단가·입력 byte당 2토큰 보수적 계산으로 송신 전 최악 금액을 예약한다. 이 검증에는 HTTP mock만 사용했고 GPT 실호출0·실제지출0, gateway 활성값도 불변이다.
-- 지정 LXC의 신규 스키마2·어댑터/프로필3·기존 v2 예산/서비스8 = 관련13 PASS, 새 파일 Ruff/mypy PASS. 실제 키 접근·모델 권한·정식 비용 정산/장애 분기·47명령 전수 스키마·p10 trace 연계는 남았다. 사용자가 지정한 `.private` GPT 정보 파일 권한은 비밀값을 읽거나 출력하지 않고 0600으로 제한했다.
+- 지정 LXC의 신규 스키마2·어댑터/프로필3·기존 v2 예산/서비스8 = 관련13 PASS, 새 파일 Ruff/mypy PASS. 실제 키 접근·모델 권한·정식 비용 정산/장애 분기·47명령 전수 스키마·p10 trace 연계는 남았다. 사용자가 지정한 `.private` GPT 정보 파일 권한은 키 값을 출력하지 않고 0600으로 제한했다.
+
+## p8 — rewrite·재해석·full_parse 유한 전이
+
+- 초기 Jev 성공은 바로 초안으로, 실제 누락/복합/권한·목록 오류는 질문/거부로 종료한다. 해석 실패만 rewrite 한 번, 보호 리터럴·숫자·부정/전체 범위 보존 검사 뒤 Jev 재해석으로 보낸다. 동일문장/거부된 rewrite는 재해석을 생략하고 원문 full_parse로 간다. 서로 다른 명령 선택은 확인 요청으로 멈춘다.
+- Jev 가용성 장애의 원문 full fallback은 명시 설정이 켜진 경우만 허용한다. full_parse는 실제 scoped 목록을 새 opaque ID로 만들어 보내고, 후보밖 ID/원문 밖 값·query만 있는 결과는 실행 초안으로 채택하지 않는다. LLM 최종 초안은 Jev 부분 결과와 병합하지 않으며 `llm_assisted`를 보존한다.
+- 지정 LXC mock의 신규 전이8·LLM 계약2·Jev 회귀4 = 관련14 PASS, Ruff/mypy PASS. 원문 의미 보존의 완전 증명·전체 실패 전이·실제8회 root 통합/후속 Discord 실행 검증은p9~p11에 남았다. 현재 활성 bot/gateway에는 연결하지 않았다.
