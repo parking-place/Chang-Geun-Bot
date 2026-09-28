@@ -46,6 +46,7 @@ class AudioRuntime:
         if code in {
             "youtube_first_pcm_failed",
             "youtube_prepare_failed",
+            "youtube_stream_unavailable",
             "youtube_stream_failed",
             "youtube_stream_timeout",
         }:

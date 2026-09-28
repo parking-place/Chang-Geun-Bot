@@ -192,6 +192,18 @@ class MediaResolver(ApprovedAudioResolver):
                         if not 0 < metadata["duration"] <= 1800:
                             raise DomainError("youtube_unsupported")
                     async with asyncio.timeout(10):
+                        readiness = await process.stdout.readline()
+                        if len(readiness) > 1024:
+                            raise DomainError("youtube_invalid_response")
+                        stage: dict[str, Any] = json.loads(readiness)
+                        if stage.get("error") in {
+                            "youtube_stream_unavailable",
+                            "youtube_first_pcm_failed",
+                            "youtube_prepare_failed",
+                        }:
+                            raise DomainError(stage["error"])
+                        if stage != {"ready": True}:
+                            raise DomainError("youtube_invalid_response")
                         try:
                             first = await process.stdout.readexactly(3840)
                         except asyncio.IncompleteReadError:

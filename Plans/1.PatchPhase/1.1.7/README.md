@@ -1,15 +1,17 @@
 # 1.1.7 — 실제 음성·장시간 운용·복구 인수
 
-- 상태: **PLANNED — 구현·새 인수 미실행**
+- 상태: **IN_PROGRESS — 인증서·서비스 사전 점검 PASS, 첫 PCM94/100 FAIL, 통합 인수 미완료**. [실행 기록](../../../evidence/public/patch-117-development-20260928.md)을 따른다.
 - 범위: **R-05, R-06, R-07**. 원안은 [안정화와 남은 인수](../03_STABILITY_AND_ACCEPTANCE.md)다.
 - 목적: 누적 개발 후보를 실제 음성·장시간 부하·한 LXC 복구·인증서 수명 조건으로 검증하고 출시 판단에 필요한 증거를 묶는다.
 - 공통 기준: [실행 규칙](../EXECUTION_RULES.md), [항목 배정](../ITEM_COVERAGE.md), [상태](../STATUS.md), [시험표](../TEST_MATRIX.md).
 
 ## 현재와 달라지는 점
 
-기존 첫 PCM 93/100은 목표 미달 기록이며 Discord에서 실제 소리가 들린 100회 인수가 아니다. 사용자 부분 청취, 합성 회귀, 과거 후보의 백업 복원도 이 버전 전체 PASS를 대신하지 않는다.
+현재 1.1.7 착수 시 `patch116a`의 첫 PCM은 93/100으로 목표 미달이었다. 같은 오류 코드에 가려진 첫 PCM 전 실패를 고정 코드로 구분하는 `patch117a` 진단 후보를 적용했다. 이 후보도 첫 PCM94/100으로 목표95%에 실패했고, 여섯 실패가 서명 미디어 URL의 HTTPS 응답 실패로 분류됐다. 최종 `patch117b`는 이 오류의 사용자 안내만 보완해 새 SHA의 100회 PCM은 반복하지 않았다. 이 첫 PCM 시험은 Discord에서 실제 소리가 들린 100회 인수가 아니다. 사용자 부분 청취, 합성 회귀, 과거 후보의 백업 복원도 이 버전 전체 PASS를 대신하지 않는다.
 
 현재 봇과 Jev 중계는 DiscordBotLXC의 서로 다른 계정으로 실행한다. 개발 인증서는 30일 유효하고 unit의 자동 부팅 시작은 미활성이다. 이 버전은 현재 배치의 수명·복원·운영 전환 절차를 구현하고 검증한다.
+
+1.1.6의 첫 잠금 200문장 평가는 명확 103/120과 예상 밖 계획 3건으로 **FAIL**이었다. 해당 결과를 통합 품질 PASS로 취급하지 않는다. 사용자는 1.1.7의 백업 검증을 건너뛰도록 지시했다. 외부 암호화 사본·복원 시험은 **SKIPPED — 사용자 지정**으로 기록하며 백업/복구 성공이나 R-06 완료를 주장하지 않는다.
 
 | 항목 | 구현·검증 범위 | 구별할 증거 |
 | --- | --- | --- |
@@ -46,7 +48,7 @@ Jev API Only·API 1.2, 최대 3단계/3 dispatch, 전체 12초·단계 4초/잔�
 
 현재 고정 epoch의 최대 3000 dispatch에서 이미 예약된 호출을 차감한 잔여가 전체 계획보다 작으면 시작하지 않고 부족분을 기록한다. 예산을 맞추려고 필수 표본을 줄여 PASS로 처리하거나 새 run·원장 삭제·재시작으로 초기화하지 않는다. 자동 재시도와 불명 예약 환불도 금지한다.
 
-현재 개발 `korean-eval`은 37문장용이며 독립 benchmark/soak runner는 구현 계획이다. 기존 미디어 probe도 실제 청취와 8시간을 자동 입증하지 않는다. 도구 구현·격리 검증 뒤 실제 실행법을 runbook에 기록한다. 모든 제품 시험은 DiscordBotLXC에서 수행한다.
+현재 개발 `korean-eval`은 37문장용이며 checksum을 잠근 첫 200문장 runner는 1.1.6에서 실행됐으나 목표에 실패했다. 경로별 benchmark/8시간 soak runner는 아직 없다. 기존 미디어 probe도 실제 청취와 8시간을 자동 입증하지 않는다. 도구 구현·격리 검증 뒤 실제 실행법을 runbook에 기록한다. 모든 제품 시험은 DiscordBotLXC에서 수행한다.
 
 ## 백업·인증서·운영 수명
 
@@ -56,6 +58,7 @@ Jev API Only·API 1.2, 최대 3단계/3 dispatch, 전체 12초·단계 4초/잔�
 - 복원으로 예약 누계가 줄거나 불명 요청이 다시 dispatch되지 않아야 한다. 백업 이후 최신 원장/tombstone과 안전하게 대조할 수 없으면 hosted 호출을 차단한 채 복원 검증만 진행한다.
 - rollback은 이전 바이너리와 호환되는 이전 봇 DB 묶음으로 수행하고 최신 DB 원본을 보존한다. 호출 예산·tombstone은 현재까지의 보존 누계를 유지하며 오래된 백업으로 되감지 않는다.
 - 만료 14일/7일/1일 전 확인·알림을 계획값으로 설정하고 만료/호스트 불일치 인증서를 거절한다. 갱신 후 양쪽 TLS trust·연결 풀 무효화·무료 readiness·키 읽기 권한을 검증한다.
+- 현재 구현한 `scripts/check_gateway_lifetime.py`는 DiscordBotLXC root의 읽기 전용 사전 점검이다. 만료 임계값에서는 비정상 종료해 운영자가 알림/갱신 절차를 시작할 수 있지만, 정기 실행·알림 수신자·인증서 자동 갱신 자체는 아직 구현/인수하지 않았다.
 - 서비스 시작 순서·drain·종료·재시작·재부팅 후 준비 상태를 검증한다. 자동 부팅 시작/운영 경보는 운영 전환 범위와 수신 대상을 확정한 뒤 적용하고 재시작 시 자동 음성 입장·재생은 금지한다.
 - OpenJevLXC에 새 작업을 수행하지 않는다. 역사 백업을 현재 최신 원장으로 간주하지 않으며 기존 원본·DB·후보·예산을 삭제하거나 덮어쓰지 않는다.
 
@@ -63,19 +66,19 @@ Jev API Only·API 1.2, 최대 3단계/3 dispatch, 전체 12초·단계 4초/잔�
 
 | 영역 | 예상 변경·산출물 |
 | --- | --- |
-| 실행·측정 | [probe_media_evaluation.py](../../../scripts/probe_media_evaluation.py), [test_profile.py](../../../scripts/test_profile.py), 새 benchmark/soak runner와 익명 결과 형식 계획 |
+| 실행·측정 | [probe_media_evaluation.py](../../../scripts/probe_media_evaluation.py), [youtube_audio.py](../../../bot/src/changgeun/providers/youtube_audio.py)/[youtube_worker.py](../../../bot/src/changgeun/providers/youtube_worker.py)의 진단 프로토콜, [test_profile.py](../../../scripts/test_profile.py), 새 benchmark/soak runner와 익명 결과 형식 계획 |
 | 복구 | [backup_runtime.py](../../../scripts/backup_runtime.py), [backup_crypto.py](../../../scripts/backup_crypto.py), 보존/검증 자동화·격리 복원/rollback 기록 |
-| 서비스 | [systemd 예시](../../../deploy/systemd/), [install_single_lxc_gateway.py](../../../scripts/install_single_lxc_gateway.py), 인증서 수명·배포 잠금·drain 검증 |
+| 서비스 | [systemd 예시](../../../deploy/systemd/), [install_single_lxc_gateway.py](../../../scripts/install_single_lxc_gateway.py), [인증서 점검](../../../scripts/check_gateway_lifetime.py), 배포 잠금·drain 검증 |
 | 증거 | 후보 manifest, 100회/8시간/품질·성능 분리 보고, 백업 무결성·RPO/RTO·운영 전환/복귀 runbook |
 
 ## 다섯 단계
 
 | 단계 | 상태 | 작업 | 종료 산출물 |
 | --- | --- | --- | --- |
-| 01 설계 | PLANNED | 잠금 후보·미디어 표본·부하/장애·비용·외부 백업/수명 정의 | 시험 프로토콜, 합산 예산, 수명/복원 경계 |
-| 02 구현 | PLANNED | 계측/runner·백업 보존·인증서 점검·운영 추적 구현 | 동작 검증 전 후보 도구·설정·runbook 초안 |
-| 03 안전 회귀 | PLANNED | timeout/취소·키 분리·변조·복원 중복·종료/재시작 격리 시험 | 제품 영향 회귀와 원장 불변 증거 |
-| 04 LXC 검증 | PLANNED | 실제 100회·성능·8시간·장애·외부 사본 복원/갱신 검증 | P117-01~07 실제 실행·청취·자원·복구 결과 |
+| 01 설계 | IN_PROGRESS | 잠금 후보·미디어 표본·부하/장애·비용·외부 백업/수명 정의 | 시험 프로토콜, 합산 예산, 수명/복원 경계 |
+| 02 구현 | IN_PROGRESS | 계측/runner·백업 보존·인증서 점검·운영 추적 구현 | 인증서 점검 도구·runbook 초안; 나머지 미구현 |
+| 03 안전 회귀 | IN_PROGRESS | timeout/취소·키 분리·변조·복원 중복·종료/재시작 격리 시험 | 키 분리/TLS 확인; 복원·장애 회귀 미실행 |
+| 04 LXC 검증 | IN_PROGRESS | 실제 100회·성능·8시간·장애·외부 사본 복원/갱신 검증 | 수명/서비스 점검 일부; P117 전건 미통과 |
 | 05 개발 인수·복귀 | PLANNED | 누적 게이트 대조, 후보 적용/rollback, 운영 전환 준비 판정 | 개발 인수 보고·남은 항목·출시 검토 자료 |
 
 ## 고유 시험

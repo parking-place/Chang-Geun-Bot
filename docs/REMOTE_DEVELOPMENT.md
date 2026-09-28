@@ -4,7 +4,7 @@
 
 ## 현재 적용 상태
 
-봇 `dev20260928k`와 중계 `dev20260928l`을 적용했다. 봇 run은 `watch-single-lxc-v1-20260928`, 중계 epoch는 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [실행 증거](../evidence/public/watch-channels-20260928.md)의 자동 회귀·실제 연결·사용자 부분 인수와 남은 전체 인수를 구분한다. 정식 VERSION/태그는 만들지 않았다.
+현재 개발 봇 `patch117b`와 중계 `patch116g`를 적용했다. 봇 run은 `patch117b-20260928`, 중계 epoch는 보존한 `single-lxc-20260928`, 프로필은 `eval-jev-api-single-lxc-v1`이다. [최근 실행 기록](../evidence/public/patch-117-development-20260928.md)과 [기존 사용자 부분 인수](../evidence/public/watch-channels-20260928.md)를 구분한다. 정식 VERSION/태그는 만들지 않았다.
 
 `changgeun-dev-bot.service`는 봇 계정, `changgeun-jev-api.service`는 별도 `changgeun-gateway` 계정으로 실행한다. 중계는 loopback TLS8443만 받는다. 외부 API 키를 봇 계정에 제공하지 않는다. 두 개발 unit은 자동 부팅 시작으로 활성화하지 않았다.
 

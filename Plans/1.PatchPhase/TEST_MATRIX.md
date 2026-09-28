@@ -1,12 +1,12 @@
 # 1.1 계열 시험 추적표
 
-- 상태: **1.1.0~1.1.3 P110~P113의 일부 조건 검증 중; 1.1.4~1.1.7의 28개 고유 시험 NOT_RUN**. [계열 현황](STATUS.md)과 각 버전 실행 기록을 따른다.
+- 상태: **1.1.0~1.1.7 부분 검증 중**. 1.1.6 첫 독립 품질 FAIL, 1.1.7 백업 검증 사용자 지정 SKIPPED이며 전체 버전 인수는 미완료다. [계열 현황](STATUS.md)과 각 버전 실행 기록을 따른다.
 - 범위: 8개 버전별7개 시험. 단계/버전 상태는 [STATUS](STATUS.md), 포함 항목은 [ITEM_COVERAGE](ITEM_COVERAGE.md)에 기록한다.
 - 아래 시험명은 추적용 요약이다. 상세 통과 조건과 하위 시나리오는 각 버전 README를 따른다. 대표 사례 하나의 성공으로 한 ID 전체를 PASS 처리하지 않는다.
 
 ## 실행과 증거
 
-제품 단위/mock·DB·lint/타입·실제 API·Discord/음성 시험은 모두 **DiscordBotLXC**에서 한다. 로컬 문서 검사는 이 표의 PASS 근거가 아니다. 1.1.0·1.1.1의 LXC 소스/설치 후보 회귀와 개발 Jev 계측은 실행했으며 사람의 조작/청취·전체 성능 인수는 남아 있다.
+제품 단위/mock·DB·lint/타입·실제 API·Discord/음성 시험은 모두 **DiscordBotLXC**에서 한다. 로컬 문서 검사는 이 표의 PASS 근거가 아니다. 각 개발 후보의 소스/설치 회귀와 부분 실제 Jev/Discord 시험은 실행했으며 사람의 100회 조작/청취·8시간·전체 성능 인수는 남아 있다.
 
 각 ID에 실제 source/wheel/config/profile/schema·fixture hash, 실행 시각/환경, 자동/실제 구분, 전체 시도/실패/미실행 분모와 증거 경로를 연결한다. 유료 요청은 원장 전후 누계·예산과 결합하고 비밀 제거 요약만 공개한다. [공통 계약](EXECUTION_RULES.md)과 [증거 양식](../0.DevPhase/EVIDENCE_TEMPLATE.md)을 적용한다.
 
@@ -132,13 +132,13 @@ snapshot/버튼/승인 회귀와 실제 Discord 페이지·단건 재승인·현
 
 | ID | 시험 시나리오 | 결과 | 새 실행 증거 |
 | --- | --- | --- | --- |
-| P117-01 | 고정 ≥20영상·준비 5회·실제 시작/전환 ≥100회 | NOT_RUN | — |
+| P117-01 | 고정 ≥20영상·준비 5회·실제 시작/전환 ≥100회 | FAIL/PARTIAL — `patch117a` 첫 PCM94/100 <95%; 최종 `patch117b`와 Discord 시작/전환/청취 미실행 | [1.1.7 기록](../../evidence/public/patch-117-development-20260928.md) |
 | P117-02 | 고정 후보의 자연어 경로별 ≥100요청·구조화 제어 | NOT_RUN | — |
 | P117-03 | 연속 ≥8시간 실제 음성·혼합 부하 | NOT_RUN | — |
 | P117-04 | 네트워크·중계/봇 종료·DB 부족 장애 | NOT_RUN | — |
-| P117-05 | 서버 외부 암호화 사본·격리 복원 | NOT_RUN | — |
-| P117-06 | 인증서 갱신·키/서비스·재부팅 | NOT_RUN | — |
-| P117-07 | 이전 바이너리/봇 DB 복귀와 최종 manifest | NOT_RUN | — |
+| P117-05 | 서버 외부 암호화 사본·격리 복원 | SKIPPED — 사용자 지정; 복구 PASS 아님 | [1.1.7 기록](../../evidence/public/patch-117-development-20260928.md) |
+| P117-06 | 인증서 갱신·키/서비스·재부팅 | PARTIAL — TLS·키 분리·활성 서비스·14/7/1일 점검 PASS; 갱신/재부팅/경보 전 | [1.1.7 기록](../../evidence/public/patch-117-development-20260928.md) |
+| P117-07 | 이전 바이너리/봇 DB 복귀와 최종 manifest | PARTIAL — 후보 wheel/manifest·원장446 유지; 복귀 미실행 | [1.1.7 기록](../../evidence/public/patch-117-development-20260928.md) |
 
 ## 기존 시험과의 회귀 연결
 

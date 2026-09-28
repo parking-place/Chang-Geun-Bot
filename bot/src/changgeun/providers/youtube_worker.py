@@ -15,6 +15,7 @@ import ssl
 import subprocess
 import sys
 import threading
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -109,6 +110,7 @@ def main() -> None:
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     socket.getaddrinfo = PinnedDNS().resolve  # type: ignore[assignment]
     header_sent = False
+    ready_sent = False
     try:
         raw = json.loads(sys.stdin.buffer.read(1024))
         identifier, node = raw["id"], raw["node"]
@@ -135,7 +137,11 @@ def main() -> None:
             urllib.request.HTTPSHandler(context=ssl.create_default_context()),
         )
         request = urllib.request.Request(info["url"], headers={"User-Agent": "Mozilla/5.0"})
-        with opener.open(request, timeout=5) as response:
+        try:
+            response = opener.open(request, timeout=5)
+        except urllib.error.HTTPError:
+            raise DomainError("youtube_stream_unavailable") from None
+        with response:
             if response.status != 200:
                 raise DomainError("youtube_stream_unavailable")
             process = subprocess.Popen(
@@ -183,6 +189,18 @@ def main() -> None:
 
             thread = threading.Thread(target=feed, daemon=True)
             thread.start()
+            first = bytearray()
+            while len(first) < 3840:
+                chunk = process.stdout.read(3840 - len(first))
+                if not chunk:
+                    break
+                first.extend(chunk)
+            if len(first) != 3840:
+                raise DomainError("youtube_first_pcm_failed")
+            sys.stdout.buffer.write(b'{"ready":true}\n')
+            sys.stdout.buffer.write(first)
+            sys.stdout.buffer.flush()
+            ready_sent = True
             while frame := process.stdout.read(3840):
                 sys.stdout.buffer.write(frame)
                 sys.stdout.buffer.flush()
@@ -194,9 +212,20 @@ def main() -> None:
             # A fixed code is safe to return; upstream text or media URLs are not.
             sys.stdout.buffer.write(json.dumps({"error": exc.code}).encode() + b"\n")
             sys.stdout.buffer.flush()
+        elif header_sent and not ready_sent:
+            code = (
+                exc.code
+                if exc.code in {"youtube_stream_unavailable", "youtube_first_pcm_failed"}
+                else "youtube_prepare_failed"
+            )
+            sys.stdout.buffer.write(json.dumps({"error": code}).encode() + b"\n")
+            sys.stdout.buffer.flush()
         os._exit(2)
     except Exception:
         # Never emit exceptions containing signed media URLs or upstream bodies.
+        if header_sent and not ready_sent:
+            sys.stdout.buffer.write(b'{"error":"youtube_prepare_failed"}\n')
+            sys.stdout.buffer.flush()
         os._exit(2)
 
 

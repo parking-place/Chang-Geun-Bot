@@ -121,6 +121,46 @@ async def test_capacity_limit_does_not_spawn(monkeypatch, tmp_path):
     create.assert_not_awaited()
 
 
+@pytest.mark.asyncio
+async def test_first_pcm_stage_reports_safe_stream_failure(monkeypatch, tmp_path):
+    resolver = MediaResolver(tmp_path, {})
+    monkeypatch.setattr(resolver, "validate", lambda *_: None)
+    reader = asyncio.StreamReader()
+    reader.feed_data(b'{"duration":10}\n{"error":"youtube_stream_unavailable"}\n')
+    reader.feed_eof()
+    process = Mock(
+        pid=None,
+        stdout=reader,
+        stdin=Mock(drain=AsyncMock()),
+        wait=AsyncMock(return_value=2),
+    )
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", AsyncMock(return_value=process))
+
+    with pytest.raises(DomainError, match="youtube_stream_unavailable"):
+        await resolver.prepare("youtube", "ABCDEFGHIJK")
+    assert resolver.pending == 0
+
+
+@pytest.mark.asyncio
+async def test_first_pcm_stage_rejects_invalid_marker(monkeypatch, tmp_path):
+    resolver = MediaResolver(tmp_path, {})
+    monkeypatch.setattr(resolver, "validate", lambda *_: None)
+    reader = asyncio.StreamReader()
+    reader.feed_data(b'{"duration":10}\n{"ready":false}\n')
+    reader.feed_eof()
+    process = Mock(
+        pid=None,
+        stdout=reader,
+        stdin=Mock(drain=AsyncMock()),
+        wait=AsyncMock(return_value=2),
+    )
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", AsyncMock(return_value=process))
+
+    with pytest.raises(DomainError, match="youtube_invalid_response"):
+        await resolver.prepare("youtube", "ABCDEFGHIJK")
+    assert resolver.pending == 0
+
+
 def test_unsupported_javascript_runtime_rejected_before_start(monkeypatch, tmp_path):
     monkeypatch.setattr(
         "changgeun.providers.youtube_audio.subprocess.check_output",

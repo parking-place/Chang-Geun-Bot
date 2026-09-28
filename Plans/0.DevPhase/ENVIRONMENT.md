@@ -27,7 +27,7 @@
 
 ## 개발 후보
 
-봇k/중계l을 현재 LXC에 적용했다. 미디어는 봇에서만 처리한다. Node22.23.3·yt-dlp2026.8.19·EJS0.8.0·FFmpeg7.1.5 핀을 유지하며 원격 JS/runtime checksum을 후보 manifest에 결합한다. Portal Intent는 사용자가 켰으며 초기 `일반`, `discord-bot-test` 두 채널을 검증/DB 이관했다. 1.0.3부터 DB 주시 목록이 기준이고 일반 슬래시/멘션 허용 목록은 그대로 유지한다.
+현재 개발 봇은 `patch117b`, 중계는 `patch116g`를 DiscordBotLXC에 적용했다. [1.1.7 기록](../../evidence/public/patch-117-development-20260928.md)에 해당 wheel/manifest와 부분 시험을 구분한다. 미디어는 봇에서만 처리한다. Node22.23.3·yt-dlp2026.8.19·EJS0.8.0·FFmpeg7.1.5 핀을 유지하며 원격 JS/runtime checksum을 후보 manifest에 결합한다. Portal Intent는 사용자가 켰으며 초기 `일반`, `discord-bot-test` 두 채널을 검증/DB 이관했다. 1.0.3부터 DB 주시 목록이 기준이고 일반 슬래시/멘션 허용 목록은 그대로 유지한다.
 
 사용자는 목록·점검·끄기 확인 후 접두어 무응답·켜기 후 반응을 정상으로 확인했다. 자동 회귀와 남은 전체 W/음성/복구 인수는 [주시 실행 증거](../../evidence/public/watch-channels-20260928.md)를 따른다. 이전1.0.1/1.0.2 부분 미디어 인수는 [당시 실행 기록](../../evidence/public/youtube-prefix-20260928.md)에 보존한다.
 

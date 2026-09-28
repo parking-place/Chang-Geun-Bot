@@ -25,12 +25,13 @@ python3 scripts/check_repository.py
 | `probe_import.py` | DiscordBotLXC; 실제 조회 snapshot을 격리 DB에서 확인·import/export·순서 회귀 |
 | `backup_crypto.py` | 지정 LXC 배포 계정; RSA recovery key·CMS AES256-GCM 암호화/인증 복호화 |
 | `backup_runtime.py` | 지정 LXC; Online Backup API·checksum/binding·새 경로 복원·요청 무효화 |
+| `check_gateway_lifetime.py` | DiscordBotLXC root; 인증서 14/7/1일·loopback TLS·계정별 키 읽기·두 서비스 상태를 읽기 전용 점검 |
 | `export_schemas.py` | DiscordBotLXC; 엄격 계약에서 공개 API 1.2 JSON Schema 생성 |
 | `probe_discord.py` | DiscordBotLXC; DAVE 시험음 전송·퇴장; 사람의 청취 인수와 구분 |
 | `seed_fixture.py` | DiscordBotLXC; 실제 DJ 역할 확인 후 승인 합성 음원 fixture 등록 |
 
 현재 제품 실행은 DiscordBotLXC만 사용하며 OpenJevLXC에 새 작업을 수행하지 않는다. [배치 결정](../docs/decisions/0008-single-lxc-jev-api.md)을 따른다.
 
-지원하는 `test_profile.py` suite는 `contract`, `activate`, `status`, `transport`, `korean-eval`이다. 실제 프로필은 `jev-api`, 격리 회귀용은 `mock`이며 mock을 실제 Discord 서비스로 활성화하지 않는다. `transport`는 실제 판단 최대 3회를 사용한다. `status`와 `--dry-run`은 유료 판단을 호출하지 않는다. `korean-eval`은 명시 eval 목적/남은 예산을 검사한 개발37문장 전용이다. 최종held-out·soak·주기 운영백업 runner는 아직 인수 전이다.
+지원하는 `test_profile.py` suite는 `contract`, `activate`, `status`, `transport`, `korean-eval`이다. 실제 프로필은 `jev-api`, 격리 회귀용은 `mock`이며 mock을 실제 Discord 서비스로 활성화하지 않는다. `transport`는 실제 판단 최대 3회를 사용한다. `status`와 `--dry-run`은 유료 판단을 호출하지 않는다. `korean-eval`은 명시 eval 목적/남은 예산을 검사한 개발37문장 전용이다. `probe_pipeline.py`의 checksum을 잠근 200문장 평가 경로는 첫 평가에 사용했으나 품질 기준에 실패했다. 경로별 성능·실제 음성/soak·주기 운영백업 runner와 인수는 남아 있다.
 
 [검증한 사용법](../docs/REMOTE_DEVELOPMENT.md) · [증거](../evidence/public/execution-20260927.md) · [원격 루프 계획](../Plans/0.DevPhase/0.0.0/02_repository_and_remote_workflow.md)

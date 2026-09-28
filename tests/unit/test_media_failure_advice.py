@@ -6,3 +6,9 @@ def test_media_failure_advice_distinguishes_supported_exclusion_without_upstream
     assert category == "unsupported" and "공개 영상" in advice
     category, advice = AudioRuntime.failure_advice("signed-url-secret")
     assert category == "unknown" and "signed-url-secret" not in advice
+
+
+def test_unavailable_stream_gets_safe_media_advice():
+    category, advice = AudioRuntime.failure_advice("youtube_stream_unavailable")
+    assert category == "media"
+    assert "오디오" in advice

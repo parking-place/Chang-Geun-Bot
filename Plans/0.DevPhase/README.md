@@ -71,4 +71,4 @@
 
 2026-09-28부터 OpenJevLXC에 새 작업을 수행하지 않는다. 현재 실행 위치는 [환경 계약](ENVIRONMENT.md)과 [결정0008](../../docs/decisions/0008-single-lxc-jev-api.md)이 우선한다.
 
-추가 기능·Jev 최적화·안정화26개 전체의 [1.1.0~1.1.7 계획](../1.PatchPhase/README.md)은 `1.PatchPhase`에 둔다. 1.1.0 개발 후보·부분 시험 진행 중이고 후속 버전은 PLANNED다. 기존 버전 상태나 출시 인수를 소급 변경하지 않는다.
+추가 기능·Jev 최적화·안정화26개 전체의 [1.1.0~1.1.7 계획](../1.PatchPhase/README.md)은 `1.PatchPhase`에 둔다. 전 버전 개발 작업과 부분 시험의 현재 결과는 [PatchPhase STATUS](../1.PatchPhase/STATUS.md)를 따른다. 기존 버전 상태나 출시 인수를 소급 변경하지 않는다.
